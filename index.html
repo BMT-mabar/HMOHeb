@@ -43,34 +43,63 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- Safe Initialization ---
+        // --- 1. SETUP ---
         const { useState, useMemo, useEffect, useRef } = React;
 
-        // --- Custom Graph Component (Replaces Recharts to prevent crashes) ---
-        const CustomBarChart = ({ data }) => {
+        // --- 2. HELPERS & COMPONENTS ---
+
+        // Safe Icon Component
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (window.lucide && iconRef.current) {
+                    const iconName = name.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '');
+                    iconRef.current.setAttribute('data-lucide', iconName);
+                    window.lucide.createIcons({
+                        root: iconRef.current.parentNode,
+                        nameAttr: 'data-lucide',
+                        attrs: { width: size, height: size, class: className }
+                    });
+                }
+            }, [name, size, className]);
+            return <i ref={iconRef} className={className} style={{ width: size, height: size, display: 'inline-block' }}></i>;
+        };
+
+        // Professional CSS Bar Chart (Crash-proof replacement for Recharts)
+        const ProBarChart = ({ data }) => {
             const maxValue = Math.max(...data.map(d => d.value));
-            
             return (
-                <div className="w-full h-64 flex items-end justify-around gap-4 pt-8 px-4">
+                <div className="w-full h-64 pt-6 relative flex items-end justify-between gap-6 px-4">
+                    {/* Background Grid Lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 px-4 pb-6 pt-6">
+                        <div className="w-full h-px bg-slate-100"></div>
+                        <div className="w-full h-px bg-slate-100"></div>
+                        <div className="w-full h-px bg-slate-100"></div>
+                        <div className="w-full h-px bg-slate-100"></div>
+                    </div>
+
                     {data.map((item, index) => {
-                        const heightPercent = (item.value / maxValue) * 100;
-                        const isGreen = index === 0; // First bar green, others red
+                        const height = (item.value / maxValue) * 100;
+                        // Logic: First bar is "good" (green), others "bad" (red)
+                        const colorClass = index === 0 ? 'bg-green-500' : 'bg-red-500'; 
                         
                         return (
-                            <div key={index} className="flex-1 flex flex-col items-center group h-full justify-end relative">
-                                {/* Tooltip on hover */}
-                                <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-xs px-2 py-1 rounded mb-2 whitespace-nowrap z-10">
+                            <div key={index} className="flex-1 flex flex-col items-center h-full justify-end z-10 group relative">
+                                {/* Tooltip */}
+                                <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-slate-800 text-white text-xs py-1 px-2 rounded shadow-lg pointer-events-none whitespace-nowrap">
                                     ₪{item.value.toLocaleString()}
                                 </div>
                                 
-                                {/* The Bar */}
-                                <div 
-                                    className={`w-full max-w-[60px] rounded-t-lg transition-all duration-1000 ease-out ${isGreen ? 'bg-green-500' : 'bg-red-500'}`}
-                                    style={{ height: `${heightPercent}%` }}
-                                ></div>
+                                {/* Bar */}
+                                <div className="w-full max-w-[60px] bg-slate-100 rounded-t-lg relative h-full flex items-end overflow-hidden">
+                                    <div 
+                                        className={`w-full ${colorClass} transition-all duration-1000 ease-out hover:opacity-90`}
+                                        style={{ height: `${height}%` }}
+                                    ></div>
+                                </div>
                                 
                                 {/* Label */}
-                                <span className="text-xs text-slate-500 mt-2 font-medium text-center">{item.name}</span>
+                                <span className="text-xs font-medium text-slate-500 mt-3 text-center">{item.name}</span>
                             </div>
                         );
                     })}
@@ -78,42 +107,26 @@
             );
         };
 
-        // --- Icon Component (Safe Lucide Wrapper) ---
-        const Icon = ({ name, size = 24, className = "" }) => {
-            const iconRef = useRef(null);
+        const Logo = () => (
+            <div className="flex items-center gap-3">
+                <img 
+                    src="B.M.T Logo.jpg" 
+                    alt="BMT Diagnostics" 
+                    className="h-16 w-auto object-contain"
+                    onError={(e) => {
+                        e.target.style.display = 'none'; 
+                        e.target.nextSibling.style.display = 'flex'; 
+                    }}
+                />
+                <div className="hidden flex-col leading-none" style={{display: 'none'}}>
+                    <span className="text-3xl font-bold text-slate-900 tracking-tighter">BM<span className="text-red-600">T</span></span>
+                    <span className="text-xs text-slate-500 tracking-widest uppercase">Diagnostics</span>
+                </div>
+            </div>
+        );
 
-            useEffect(() => {
-                if (window.lucide && iconRef.current) {
-                    const iconName = name.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, ''); // Convert camelCase to kebab-case
-                    
-                    // Manual mapping for some tricky names if needed, usually lucide handles data-lucide attributes
-                    iconRef.current.setAttribute('data-lucide', iconName);
-                    window.lucide.createIcons({
-                        root: iconRef.current.parentNode,
-                        nameAttr: 'data-lucide',
-                        attrs: {
-                            width: size,
-                            height: size,
-                            class: className
-                        }
-                    });
-                }
-            }, [name, size, className]);
-
-            // Simple SVG fallback map for critical icons if Lucide fails completely
-            const fallbacks = {
-                'ArrowRightCircle': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8l4 4-4 4"/></svg>,
-                'ChevronLeft': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>,
-                'ChevronRight': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>,
-                'CheckCircle2': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            };
-
-            // Use global Lucide via <i> tag which the library scans
-            return <i ref={iconRef} className={className} style={{ width: size, height: size, display: 'inline-block' }}></i>;
-        };
-
-        // --- Gemini API ---
-        const apiKey = ""; // <--- TODO: הכנס את המפתח שלך כאן
+        // Gemini API Configuration
+        const apiKey = ""; 
 
         const generateGeminiContent = async (prompt) => {
             if (!apiKey) return "נא להגדיר מפתח API בקוד.";
@@ -132,7 +145,60 @@
             }
         };
 
-        // --- Slides ---
+        // --- 3. DEFINING AIAssistant BEFORE IT'S USED (CRITICAL FIX) ---
+        const AIAssistant = () => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [messages, setMessages] = useState([{ role: 'system', text: 'שלום! אני היועץ הווירטואלי של BMT. אני כאן לנתח נתונים ולענות על שאלות.' }]);
+            const [input, setInput] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+            const chatEndRef = useRef(null);
+
+            useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages, isOpen]);
+
+            const handleSend = async () => {
+                if (!input.trim()) return;
+                const userMsg = input;
+                setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+                setInput('');
+                setIsTyping(true);
+                
+                const prompt = `You are a sales assistant for BMT Diagnostics. Context: Pitch Deck. Question: "${userMsg}". Answer briefly in Hebrew.`;
+                const reply = await generateGeminiContent(prompt);
+                
+                setIsTyping(false);
+                setMessages(prev => [...prev, { role: 'system', text: reply }]);
+            };
+
+            return (
+                <React.Fragment>
+                    <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 left-6 z-[60] bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform flex items-center justify-center">
+                        {isOpen ? <Icon name="x" size={24} /> : <Icon name="bot" size={24} />}
+                    </button>
+                    {isOpen && (
+                        <div className="fixed bottom-24 left-6 z-[60] w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col h-[450px]" dir="rtl">
+                            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white flex items-center gap-2 rounded-t-2xl font-bold">
+                                <Icon name="sparkles" size={18}/> BMT AI Consultant
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-3 custom-scroll">
+                                {messages.map((msg, idx) => (
+                                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${msg.role === 'user' ? 'bg-white border text-slate-800 rounded-br-none' : 'bg-blue-600 text-white rounded-bl-none'}`}>{msg.text}</div>
+                                    </div>
+                                ))}
+                                {isTyping && <div className="flex justify-end"><div className="bg-blue-600 text-white p-2 rounded-2xl rounded-bl-none text-xs opacity-75">מקליד...</div></div>}
+                                <div ref={chatEndRef} />
+                            </div>
+                            <div className="p-3 bg-white border-t flex gap-2">
+                                <input value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} className="flex-1 px-4 py-2 bg-slate-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="שאל אותי..." />
+                                <button onClick={handleSend} className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors"><Icon name="arrow-right-circle" size={20} className="rotate-180"/></button>
+                            </div>
+                        </div>
+                    )}
+                </React.Fragment>
+            );
+        };
+
+        // --- 4. SLIDES ---
 
         const CoverSlide = ({ nextSlide }) => (
             <div className="flex flex-col items-center justify-center h-full text-center fade-in">
@@ -145,7 +211,7 @@
                 </h1>
                 <p className="text-xl md:text-3xl text-slate-500 max-w-4xl mb-12 font-light leading-relaxed">
                     שילוב עוצמתי של בדיקות מעבדה מדויקות עם בינת מלאכותית.
-                    <br/><strong className="text-slate-700">חיסכון עצום, גילוי מוקדם וחווית מטופל חדשה.</strong>
+                    <br/><strong className="text-slate-700 font-medium">חיסכון עצום, גילוי מוקדם וחווית מטופל חדשה.</strong>
                 </p>
                 <button onClick={nextSlide} className="group bg-blue-600 hover:bg-blue-700 text-white text-xl px-12 py-5 rounded-full font-bold shadow-xl transition-all hover:scale-105 flex items-center gap-4">
                     התחל מצגת <Icon name="arrow-right-circle" className="text-white" />
@@ -163,30 +229,32 @@
                     <ul className="space-y-6">
                         <li className="flex gap-4 items-start bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <div className="bg-red-100 p-2 rounded-lg text-red-600"><Icon name="trending-up" /></div>
-                            <div><h3 className="text-lg font-bold">היענות נמוכה</h3><p className="text-slate-600">בדיקות סקר נתפסות כלא נעימות ומסורבלות.</p></div>
+                            <div><h3 className="text-lg font-bold text-slate-800">היענות נמוכה</h3><p className="text-slate-600 text-sm">בדיקות סקר נתפסות כלא נעימות ומסורבלות.</p></div>
                         </li>
                         <li className="flex gap-4 items-start bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <div className="bg-orange-100 p-2 rounded-lg text-orange-600"><Icon name="activity" /></div>
-                            <div><h3 className="text-lg font-bold">עומס על המומחים</h3><p className="text-slate-600">זמני המתנה ארוכים עקב חוסר סינון יעיל.</p></div>
+                            <div><h3 className="text-lg font-bold text-slate-800">עומס על המומחים</h3><p className="text-slate-600 text-sm">זמני המתנה ארוכים עקב חוסר סינון יעיל.</p></div>
                         </li>
                         <li className="flex gap-4 items-start bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Icon name="smartphone" /></div>
-                            <div><h3 className="text-lg font-bold">ציפייה לדיגיטל</h3><p className="text-slate-600">המטופלים דורשים פתרונות מידיים מהבית.</p></div>
+                            <div><h3 className="text-lg font-bold text-slate-800">ציפייה לדיגיטל</h3><p className="text-slate-600 text-sm">המטופלים דורשים פתרונות מידיים מהבית.</p></div>
                         </li>
                     </ul>
                 </div>
                 <div className="flex-1 w-full bg-white p-8 rounded-3xl shadow-xl border border-gray-100 flex flex-col">
-                    <h3 className="text-2xl font-bold text-center mb-2">מחיר ההזנחה (CRC)</h3>
+                    <h3 className="text-2xl font-bold text-center mb-2 text-slate-800">מחיר ההזנחה (CRC)</h3>
                     <p className="text-center text-sm text-slate-500 mb-4">עלות שנתית למטופל</p>
                     
-                    {/* CUSTOM CSS CHART - NO RECHARTS DEPENDENCY */}
-                    <CustomBarChart data={[
+                    {/* Professional CSS Chart */}
+                    <ProBarChart data={[
                         { name: 'גילוי מוקדם', value: 30000 },
                         { name: 'שלב 3', value: 180000 },
                         { name: 'שלב 4 (גרורתי)', value: 350000 }
                     ]} />
 
-                    <p className="text-center text-red-600 font-bold mt-4 bg-red-50 py-2 rounded-lg">גילוי מאוחר עולה למערכת פי 10 יותר!</p>
+                    <div className="text-center bg-red-50 text-red-600 font-bold mt-6 py-3 rounded-xl text-sm">
+                        גילוי מאוחר עולה למערכת פי 10 יותר!
+                    </div>
                 </div>
             </div>
         );
@@ -198,23 +266,23 @@
                     <p className="text-xl text-slate-500">מעבדה מדויקת בכף היד</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 fade-in flex-1">
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center flex flex-col items-center hover:-translate-y-2 transition-transform">
+                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center flex flex-col items-center hover:-translate-y-2 transition-transform duration-300">
                         <div className="bg-blue-100 p-4 rounded-full text-blue-600 mb-6"><Icon name="scan" size={40}/></div>
-                        <h3 className="text-2xl font-bold mb-3">1. סריקה פשוטה</h3>
-                        <p className="text-slate-600">ביצוע הבדיקה בבית וסריקה באפליקציה. ממשק מותאם לכל גיל.</p>
+                        <h3 className="text-2xl font-bold mb-3 text-slate-800">1. סריקה פשוטה</h3>
+                        <p className="text-slate-600 leading-relaxed">ביצוע הבדיקה בבית וסריקה באפליקציה. ממשק מותאם לכל גיל.</p>
                     </div>
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center flex flex-col items-center hover:-translate-y-2 transition-transform">
+                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center flex flex-col items-center hover:-translate-y-2 transition-transform duration-300">
                         <div className="bg-indigo-100 p-4 rounded-full text-indigo-600 mb-6"><Icon name="brain-circuit" size={40}/></div>
-                        <h3 className="text-2xl font-bold mb-3">2. פענוח AI</h3>
-                        <p className="text-slate-600">אלגוריתם Computer Vision המזהה בדיוק גבוה גם פסים חלשים.</p>
+                        <h3 className="text-2xl font-bold mb-3 text-slate-800">2. פענוח AI</h3>
+                        <p className="text-slate-600 leading-relaxed">אלגוריתם Computer Vision המזהה בדיוק גבוה גם פסים חלשים.</p>
                     </div>
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center flex flex-col items-center hover:-translate-y-2 transition-transform">
+                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center flex flex-col items-center hover:-translate-y-2 transition-transform duration-300">
                         <div className="bg-teal-100 p-4 rounded-full text-teal-600 mb-6"><Icon name="database" size={40}/></div>
-                        <h3 className="text-2xl font-bold mb-3">3. סגירת מעגל</h3>
-                        <p className="text-slate-600">שידור לתיק הרפואי וזימון תור אוטומטי במקרה של תוצאה חיובית.</p>
+                        <h3 className="text-2xl font-bold mb-3 text-slate-800">3. סגירת מעגל</h3>
+                        <p className="text-slate-600 leading-relaxed">שידור לתיק הרפואי וזימון תור אוטומטי במקרה של תוצאה חיובית.</p>
                     </div>
                 </div>
-                <div className="mt-8 flex gap-4 justify-center">
+                <div className="mt-8 flex gap-4 justify-center fade-in">
                      <div className="bg-green-50 text-green-700 px-6 py-3 rounded-full font-bold flex items-center gap-2"><Icon name="check-circle-2" size={20}/> זמינות 24/7</div>
                      <div className="bg-blue-50 text-blue-700 px-6 py-3 rounded-full font-bold flex items-center gap-2"><Icon name="lock" size={20}/> אבטחת מידע</div>
                 </div>
@@ -239,35 +307,37 @@
 
             return (
                 <div className="h-full flex flex-col">
-                    <h2 className="text-4xl font-bold mb-6 fade-in">מחשבון חיסכון FOB</h2>
+                    <h2 className="text-4xl font-bold mb-6 fade-in text-slate-800">מחשבון חיסכון FOB</h2>
                     <div className="flex flex-col lg:flex-row gap-8 fade-in flex-1">
                         <div className="flex-1 bg-white p-8 rounded-3xl shadow-lg border border-blue-100 space-y-8">
-                            <h3 className="font-bold text-xl flex items-center gap-2 text-slate-700"><Icon name="settings-2" /> פרמטרים</h3>
+                            <h3 className="font-bold text-xl flex items-center gap-2 text-slate-700 border-b pb-4"><Icon name="settings-2" /> פרמטרים</h3>
                             <div>
-                                <label className="flex justify-between font-bold mb-2">אוכלוסיית יעד <span>{targetPop.toLocaleString()}</span></label>
-                                <input type="range" min="10000" max="200000" step="5000" value={targetPop} onChange={e=>setTargetPop(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 dir-ltr"/>
+                                <label className="flex justify-between font-bold mb-2 text-slate-600">אוכלוסיית יעד <span className="text-blue-600">{targetPop.toLocaleString()}</span></label>
+                                <input type="range" min="10000" max="200000" step="5000" value={targetPop} onChange={e=>setTargetPop(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 dir-ltr"/>
                             </div>
                             <div>
-                                <label className="flex justify-between font-bold mb-2">היענות נוכחית <span>{baseCompliance}%</span></label>
-                                <input type="range" min="30" max="80" value={baseCompliance} onChange={e=>setBaseCompliance(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-slate-400 dir-ltr"/>
+                                <label className="flex justify-between font-bold mb-2 text-slate-600">היענות נוכחית <span className="text-slate-600">{baseCompliance}%</span></label>
+                                <input type="range" min="30" max="80" value={baseCompliance} onChange={e=>setBaseCompliance(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-400 dir-ltr"/>
                             </div>
                             <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                                <label className="flex justify-between font-bold mb-2 text-green-700">תוספת היענות עם BMT <span>+{appBoost}%</span></label>
+                                <label className="flex justify-between font-bold mb-2 text-green-800">תוספת היענות עם BMT <span className="text-green-600">+{appBoost}%</span></label>
                                 <input type="range" min="5" max="30" value={appBoost} onChange={e=>setAppBoost(Number(e.target.value))} className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer accent-green-600 dir-ltr"/>
                             </div>
                         </div>
                         <div className="flex-1 space-y-6">
-                            <div className="bg-slate-800 text-white p-8 rounded-3xl shadow-lg text-center">
-                                <div className="text-slate-300 mb-2">חיסכון שנתי משוער</div>
-                                <div className="text-6xl font-black text-green-400 tracking-tight">₪{savings.toLocaleString()}</div>
-                                <div className="mt-4 text-sm text-slate-400">מבוסס על מניעת תחלואה קשה</div>
-                            </div>
-                            <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex-1">
-                                <div className="flex justify-between mb-4">
-                                    <span className="font-bold text-blue-800 flex items-center gap-2"><Icon name="sparkles" size={16}/> ניתוח AI</span>
-                                    <button onClick={getSummary} className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow hover:bg-blue-700">{loading ? '...' : 'נתח נתונים'}</button>
+                            <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-lg text-center relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <div className="text-slate-300 mb-2 font-medium">חיסכון שנתי משוער</div>
+                                    <div className="text-6xl font-black text-green-400 tracking-tight">₪{savings.toLocaleString()}</div>
+                                    <div className="mt-4 text-sm text-slate-400">מבוסס על מניעת תחלואה קשה וטיפולים אונקולוגיים</div>
                                 </div>
-                                <p className="text-slate-700 text-sm leading-relaxed min-h-[40px]">{aiSummary || 'לחץ על הכפתור לקבלת תובנה עסקית מבוססת הנתונים שלך...'}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-2xl border border-indigo-100 flex-1 flex flex-col">
+                                <div className="flex justify-between mb-4 items-center">
+                                    <span className="font-bold text-indigo-800 flex items-center gap-2"><Icon name="sparkles" size={16}/> ניתוח AI</span>
+                                    <button onClick={getSummary} className="bg-indigo-600 text-white text-xs px-4 py-2 rounded-full shadow hover:bg-indigo-700 transition-colors">{loading ? '...' : 'נתח נתונים'}</button>
+                                </div>
+                                <p className="text-slate-700 text-sm leading-relaxed flex-1">{aiSummary || 'לחץ על הכפתור לקבלת תובנה עסקית מבוססת הנתונים שלך...'}</p>
                             </div>
                         </div>
                     </div>
@@ -277,26 +347,26 @@
 
         const CalprotectinSlide = () => (
             <div className="h-full flex flex-col">
-                <h2 className="text-4xl font-bold mb-2 fade-in">Calprotectin</h2>
+                <h2 className="text-4xl font-bold mb-2 fade-in text-slate-800">Calprotectin</h2>
                 <p className="text-xl text-slate-500 mb-10 fade-in">סינון חכם: IBD לעומת IBS</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 fade-in flex-1">
                     <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-indigo-500 flex flex-col justify-center">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="bg-indigo-100 p-3 rounded-full text-indigo-600"><Icon name="alert-triangle" size={32}/></div>
-                            <h3 className="text-2xl font-bold">המצב כיום</h3>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-indigo-100 p-4 rounded-full text-indigo-600"><Icon name="alert-triangle" size={32}/></div>
+                            <h3 className="text-3xl font-bold text-slate-800">המצב כיום</h3>
                         </div>
-                        <p className="text-lg text-slate-600 leading-relaxed">
+                        <p className="text-xl text-slate-600 leading-relaxed">
                             כל תלונה על כאב בטן נשלחת לקולונוסקופיה יקרה (2,500 ₪) עקב חוסר יכולת לסנן במרפאה.
                             <br/><br/>
-                            <strong>תוצאה:</strong> עומס תורים עצום ובזבוז משאבים.
+                            <strong className="text-red-500">תוצאה:</strong> עומס תורים עצום ובזבוז משאבים.
                         </p>
                     </div>
                     <div className="bg-white p-8 rounded-3xl shadow-lg border-r-8 border-green-500 flex flex-col justify-center">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="bg-green-100 p-3 rounded-full text-green-600"><Icon name="check-circle-2" size={32}/></div>
-                            <h3 className="text-2xl font-bold">עם BMT</h3>
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="bg-green-100 p-4 rounded-full text-green-600"><Icon name="check-circle-2" size={32}/></div>
+                            <h3 className="text-3xl font-bold text-slate-800">עם BMT</h3>
                         </div>
-                        <p className="text-lg text-slate-600 leading-relaxed">
+                        <p className="text-xl text-slate-600 leading-relaxed">
                             בדיקה ביתית פשוטה של Calprotectin.
                             <br/><br/>
                             מסננת כ-<strong>50%</strong> מהמקרים (שהם IBS), חוסכת תורים מיותרים ומיליוני שקלים בשנה לקופה.
@@ -308,49 +378,49 @@
 
         const ProductSuiteSlide = () => (
             <div className="h-full flex flex-col">
-                <h2 className="text-4xl font-bold mb-8 fade-in">פורטפוליו בדיקות</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 fade-in h-full">
+                <h2 className="text-4xl font-bold mb-8 fade-in text-slate-800">פורטפוליו בדיקות</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 fade-in h-full pb-8">
                     <div className="bg-white p-8 rounded-3xl shadow-lg border-t-8 border-teal-500 flex flex-col">
                         <div className="flex items-center gap-4 mb-6">
                             <div className="bg-teal-100 p-4 rounded-2xl text-teal-600"><Icon name="flask-conical" size={32}/></div>
-                            <h3 className="text-2xl font-bold">גסטרואנטרולוגיה</h3>
+                            <h3 className="text-2xl font-bold text-slate-800">גסטרואנטרולוגיה</h3>
                         </div>
                         <ul className="space-y-4 flex-1">
-                            <li className="bg-slate-50 p-4 rounded-xl flex items-start gap-3">
-                                <div className="text-teal-500 mt-1"><Icon name="check" size={18}/></div>
-                                <div><strong>H. Pylori Ag:</strong> מחליף תבחין נשיפה יקר ומסורבל. תשובה במקום.</div>
+                            <li className="bg-slate-50 p-4 rounded-xl flex items-start gap-4">
+                                <div className="text-teal-500 mt-1"><Icon name="check" size={20}/></div>
+                                <div><strong className="block text-lg text-slate-800">H. Pylori Ag</strong><span className="text-slate-600">מחליף תבחין נשיפה יקר ומסורבל.</span></div>
                             </li>
-                            <li className="bg-slate-50 p-4 rounded-xl flex items-start gap-3">
-                                <div className="text-teal-500 mt-1"><Icon name="check" size={18}/></div>
-                                <div><strong>Calprotectin:</strong> סמן דלקת רגיש לניטור IBD וסינון.</div>
+                            <li className="bg-slate-50 p-4 rounded-xl flex items-start gap-4">
+                                <div className="text-teal-500 mt-1"><Icon name="check" size={20}/></div>
+                                <div><strong className="block text-lg text-slate-800">Calprotectin</strong><span className="text-slate-600">סמן דלקת רגיש לניטור IBD וסינון.</span></div>
                             </li>
-                            <li className="bg-slate-50 p-4 rounded-xl flex items-start gap-3">
-                                <div className="text-teal-500 mt-1"><Icon name="check" size={18}/></div>
-                                <div><strong>Adeno/Rota:</strong> פאנל ילדים לזיהוי מהיר של וירוסים.</div>
+                            <li className="bg-slate-50 p-4 rounded-xl flex items-start gap-4">
+                                <div className="text-teal-500 mt-1"><Icon name="check" size={20}/></div>
+                                <div><strong className="block text-lg text-slate-800">Adeno/Rota</strong><span className="text-slate-600">פאנל ילדים לזיהוי מהיר של וירוסים.</span></div>
                             </li>
                         </ul>
                     </div>
                     <div className="bg-white p-8 rounded-3xl shadow-lg border-t-8 border-rose-500 flex flex-col">
                         <div className="flex items-center gap-4 mb-6">
                             <div className="bg-rose-100 p-4 rounded-2xl text-rose-600"><Icon name="stethoscope" size={32}/></div>
-                            <h3 className="text-2xl font-bold">משפחה וילדים</h3>
+                            <h3 className="text-2xl font-bold text-slate-800">משפחה וילדים</h3>
                         </div>
                         <div className="grid grid-cols-2 gap-4 flex-1 content-start">
-                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
-                                <strong className="block text-lg">Covid + Flu</strong>
-                                <span className="text-xs text-slate-500">Combo Test</span>
+                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100 flex flex-col justify-center h-32">
+                                <strong className="block text-lg text-slate-800">Covid + Flu</strong>
+                                <span className="text-xs text-slate-500 mt-1">Combo Test</span>
                             </div>
-                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
-                                <strong className="block text-lg">Strep A</strong>
-                                <span className="text-xs text-slate-500">מניעת אנטיביוטיקה</span>
+                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100 flex flex-col justify-center h-32">
+                                <strong className="block text-lg text-slate-800">Strep A</strong>
+                                <span className="text-xs text-slate-500 mt-1">מניעת אנטיביוטיקה</span>
                             </div>
-                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
-                                <strong className="block text-lg">Pregnancy</strong>
-                                <span className="text-xs text-slate-500">hCG רגיש</span>
+                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100 flex flex-col justify-center h-32">
+                                <strong className="block text-lg text-slate-800">Pregnancy</strong>
+                                <span className="text-xs text-slate-500 mt-1">hCG רגיש</span>
                             </div>
-                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
-                                <strong className="block text-lg">Giardia</strong>
-                                <span className="text-xs text-slate-500">זיהוי טפילים</span>
+                            <div className="bg-slate-50 p-4 rounded-xl text-center border border-slate-100 flex flex-col justify-center h-32">
+                                <strong className="block text-lg text-slate-800">Giardia</strong>
+                                <span className="text-xs text-slate-500 mt-1">זיהוי טפילים</span>
                             </div>
                         </div>
                     </div>
@@ -360,28 +430,28 @@
 
         const SummarySlide = () => (
             <div className="flex flex-col items-center justify-center h-full fade-in">
-                <div className="w-full max-w-5xl bg-slate-900 rounded-[3rem] shadow-2xl p-12 text-center text-white relative overflow-hidden">
+                <div className="w-full max-w-5xl bg-slate-900 rounded-[3rem] shadow-2xl p-16 text-center text-white relative overflow-hidden">
                     {/* Background Glows */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full blur-[100px] opacity-30 -mr-20 -mt-20"></div>
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-500 rounded-full blur-[100px] opacity-30 -ml-20 -mb-20"></div>
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[120px] opacity-30 -mr-20 -mt-20 pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500 rounded-full blur-[120px] opacity-30 -ml-20 -mb-20 pointer-events-none"></div>
 
                     <div className="relative z-10">
-                        <div className="inline-block bg-blue-600 p-4 rounded-2xl mb-6 shadow-lg shadow-blue-500/50"><Icon name="activity" size={48} className="text-white"/></div>
-                        <h2 className="text-5xl font-black mb-6">העתיד של הדיאגנוסטיקה</h2>
-                        <p className="text-2xl text-slate-300 max-w-3xl mx-auto mb-12 font-light">
+                        <div className="inline-block bg-blue-600 p-5 rounded-2xl mb-8 shadow-lg shadow-blue-500/50"><Icon name="activity" size={56} className="text-white"/></div>
+                        <h2 className="text-6xl font-black mb-6 tracking-tight">העתיד של הדיאגנוסטיקה</h2>
+                        <p className="text-2xl text-slate-300 max-w-3xl mx-auto mb-16 font-light leading-relaxed">
                             השילוב בין בדיקות מעבדה מדויקות לטכנולוגיית AI ביתית הוא המפתח לאיכות רפואית, חיסכון כלכלי ושביעות רצון.
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-right">
-                            <div className="bg-white/10 p-6 rounded-2xl border border-white/10 hover:bg-white/20 transition-colors">
-                                <h4 className="text-xl font-bold text-blue-400 mb-2">קליני</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-right">
+                            <div className="bg-white/10 p-8 rounded-3xl border border-white/10 hover:bg-white/20 transition-colors backdrop-blur-md">
+                                <h4 className="text-2xl font-bold text-blue-400 mb-3">קליני</h4>
                                 <p className="text-slate-300">דיוק מעבדתי ומניעת טעויות אנוש.</p>
                             </div>
-                            <div className="bg-white/10 p-6 rounded-2xl border border-white/10 hover:bg-white/20 transition-colors">
-                                <h4 className="text-xl font-bold text-green-400 mb-2">כלכלי</h4>
+                            <div className="bg-white/10 p-8 rounded-3xl border border-white/10 hover:bg-white/20 transition-colors backdrop-blur-md">
+                                <h4 className="text-2xl font-bold text-green-400 mb-3">כלכלי</h4>
                                 <p className="text-slate-300">חיסכון אדיר בטיפולים ובדיקות מיותרות.</p>
                             </div>
-                            <div className="bg-white/10 p-6 rounded-2xl border border-white/10 hover:bg-white/20 transition-colors">
-                                <h4 className="text-xl font-bold text-purple-400 mb-2">שירותי</h4>
+                            <div className="bg-white/10 p-8 rounded-3xl border border-white/10 hover:bg-white/20 transition-colors backdrop-blur-md">
+                                <h4 className="text-2xl font-bold text-purple-400 mb-3">שירותי</h4>
                                 <p className="text-slate-300">זמינות מקסימלית למבוטח ללא תורים.</p>
                             </div>
                         </div>
@@ -390,54 +460,44 @@
             </div>
         );
 
-        // --- Main App Layout ---
+        // --- 5. MAIN APP ---
 
         const App = () => {
-            const [currentSlide, setCurrentSlide] = useState(0);
+            const [slide, setSlide] = useState(0);
             
             useEffect(() => {
-                // Ensure icons are rendered when slide changes
-                if(window.lucide) window.lucide.createIcons();
-                // Remove loader if exists
+                // Remove loader when app mounts
                 const loader = document.getElementById('loader');
                 if(loader) loader.style.display = 'none';
+                
+                // Re-scan for icons on slide change
+                if(window.lucide) window.lucide.createIcons();
             });
 
             const slides = [CoverSlide, StrategySlide, DigitalSolutionSlide, FOBEconomicsSlide, CalprotectinSlide, ProductSuiteSlide, SummarySlide];
-            const Component = slides[currentSlide];
+            const Component = slides[slide];
 
-            const nextSlide = () => { if (currentSlide < slides.length - 1) setCurrentSlide(curr => curr + 1); };
-            const prevSlide = () => { if (currentSlide > 0) setCurrentSlide(curr => curr - 1); };
+            const nextSlide = () => { if (currentSlide < slides.length - 1) setSlide(s => s + 1); };
+            const prevSlide = () => { if (currentSlide > 0) setSlide(s => s - 1); };
 
             return (
                 <div className="w-full h-screen bg-slate-50 flex flex-col text-right font-sans" dir="rtl">
                     {/* Header */}
-                    <div className="fixed top-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-md shadow-sm z-50 flex items-center justify-between px-8 border-b border-gray-100">
-                        <div className="flex items-center gap-3">
-                            <img 
-                                src="B.M.T Logo.jpg" 
-                                alt="BMT" 
-                                className="h-16 w-auto object-contain"
-                                onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }}
-                            />
-                            {/* Text Fallback Logo */}
-                            <div className="hidden text-2xl font-bold tracking-tight select-none">
-                                BM<span className="text-red-700 italic">T</span> <span className="text-sm font-normal text-slate-500">Diagnostics</span>
-                            </div>
-                        </div>
+                    <div className="fixed top-0 left-0 right-0 h-24 bg-white/95 backdrop-blur-md shadow-sm z-50 flex items-center justify-between px-8 border-b border-gray-100">
+                        <Logo />
                         <div className="flex items-center gap-4">
                             <div className="hidden md:flex gap-1.5 bg-slate-100 p-1.5 rounded-full">
                                 {slides.map((_, i) => (
-                                    <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-blue-600' : 'w-2 bg-gray-300'}`} />
+                                    <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === slide ? 'w-8 bg-blue-600' : 'w-2 bg-gray-300'}`} />
                                 ))}
                             </div>
-                            <span className="text-sm font-bold text-slate-500">שקף {currentSlide + 1}</span>
+                            <span className="text-sm font-bold text-slate-500 w-16 text-center">שקף {slide + 1}</span>
                         </div>
                     </div>
                     
                     {/* Main Content Area */}
-                    <div className="w-full h-full flex flex-col pt-24 pb-24 px-4 md:px-16 max-w-7xl mx-auto overflow-y-auto custom-scroll">
-                        <Component nextSlide={nextSlide} />
+                    <div className="w-full h-full flex flex-col pt-28 pb-24 px-4 md:px-16 max-w-7xl mx-auto overflow-y-auto custom-scroll">
+                        <Component nextSlide={() => setSlide(s => Math.min(s + 1, slides.length - 1))} />
                     </div>
 
                     {/* AI Assistant */}
@@ -445,12 +505,12 @@
 
                     {/* Footer Navigation */}
                     <div className="fixed bottom-0 left-0 right-0 h-20 bg-white border-t border-gray-200 flex items-center justify-between px-8 z-50">
-                        <button onClick={prevSlide} disabled={currentSlide === 0} className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold transition-all ${currentSlide === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}>
+                        <button onClick={() => setSlide(s => Math.max(0, s - 1))} disabled={slide === 0} className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors">
                             <Icon name="chevron-right" size={20} /> הקודם
                         </button>
-                        <div className="hidden md:block text-slate-400 text-sm">© 2024 BMT Diagnostics. Confidential.</div>
-                        <button onClick={nextSlide} disabled={currentSlide === slides.length - 1} className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold transition-all shadow-md ${currentSlide === slides.length - 1 ? 'text-gray-300 cursor-not-allowed bg-gray-100 shadow-none' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                            {currentSlide === slides.length - 1 ? 'סיום' : 'הבא'} <Icon name="chevron-left" size={20} />
+                        <div className="hidden md:block text-slate-400 text-sm font-medium tracking-wide">© 2024 BMT Diagnostics. Confidential.</div>
+                        <button onClick={() => setSlide(s => Math.min(slides.length - 1, s + 1))} disabled={slide === slides.length - 1} className="flex items-center gap-2 px-8 py-3 rounded-full font-bold bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 shadow-md transition-all hover:scale-105">
+                            {slide === slides.length - 1 ? 'סיום' : 'הבא'} <Icon name="chevron-left" size={20} />
                         </button>
                     </div>
                 </div>
