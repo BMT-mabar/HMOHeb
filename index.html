@@ -46,7 +46,7 @@
         // Define React hooks globally
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- HELPER COMPONENTS (Defined FIRST) ---
+        // --- HELPER COMPONENTS (Defined FIRST to avoid ReferenceError) ---
 
         // Icon Component using Global Lucide
         const Icon = ({ name, size = 24, className = "" }) => {
