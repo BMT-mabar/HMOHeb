@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMT Diagnostics - Final Deck</title>
+    <title>BMT Diagnostics - Executive Deck</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -324,7 +324,7 @@
                             </div>
                         </div>
                     </div>
-                </SlideContainer>
+                </div>
             );
         };
 
@@ -438,19 +438,19 @@
                         </div>
                         <div className="grid grid-cols-2 gap-6 flex-1 content-start">
                             <div className="bg-slate-50 p-6 rounded-2xl text-center border border-slate-100 flex flex-col justify-center items-center hover:bg-rose-50 transition-colors h-40">
-                                <strong className="block text-xl text-slate-800 mb-2">Covid + Flu</strong>
+                                <strong className="block text-xl text-slate-800 mb-1">Covid + Flu</strong>
                                 <span className="text-sm text-slate-500">Combo A+B Test</span>
                             </div>
                             <div className="bg-slate-50 p-6 rounded-2xl text-center border border-slate-100 flex flex-col justify-center items-center hover:bg-rose-50 transition-colors h-40">
-                                <strong className="block text-xl text-slate-800 mb-2">Strep A</strong>
+                                <strong className="block text-xl text-slate-800 mb-1">Strep A</strong>
                                 <span className="text-sm text-slate-500">מניעת אנטיביוטיקה</span>
                             </div>
                             <div className="bg-slate-50 p-6 rounded-2xl text-center border border-slate-100 flex flex-col justify-center items-center hover:bg-rose-50 transition-colors h-40">
-                                <strong className="block text-xl text-slate-800 mb-2">Pregnancy</strong>
+                                <strong className="block text-xl text-slate-800 mb-1">Pregnancy</strong>
                                 <span className="text-sm text-slate-500">hCG רגיש במיוחד</span>
                             </div>
                             <div className="bg-slate-50 p-6 rounded-2xl text-center border border-slate-100 flex flex-col justify-center items-center hover:bg-rose-50 transition-colors h-40">
-                                <strong className="block text-xl text-slate-800 mb-2">Giardia</strong>
+                                <strong className="block text-xl text-slate-800 mb-1">Giardia</strong>
                                 <span className="text-sm text-slate-500">זיהוי טפילים</span>
                             </div>
                         </div>
@@ -462,6 +462,7 @@
         const SummarySlide = () => (
             <div className="flex flex-col items-center justify-center h-full fade-in px-4">
                 <div className="w-full max-w-6xl bg-slate-900 rounded-[3rem] shadow-2xl p-16 text-center text-white relative overflow-hidden">
+                    {/* Background Glows */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[120px] opacity-30 -mr-20 -mt-20 pointer-events-none"></div>
                     <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500 rounded-full blur-[120px] opacity-30 -ml-20 -mb-20 pointer-events-none"></div>
 
@@ -490,13 +491,13 @@
             </div>
         );
 
-        // --- MAIN APP ---
+        // --- 4. MAIN APP LAYOUT ---
 
         const App = () => {
             const [currentSlide, setCurrentSlide] = useState(0);
             
+            // Remove loader when app renders
             useEffect(() => {
-                // Remove loader
                 const loader = document.getElementById('loader');
                 if(loader) loader.style.display = 'none';
                 
