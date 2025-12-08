@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMT Diagnostics - Executive Presentation</title>
+    <title>BMT Diagnostics - Executive Deck</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -19,11 +19,13 @@
     <style>
         body { font-family: 'Heebo', sans-serif; background-color: #f8fafc; margin: 0; padding: 0; overflow: hidden; }
         
+        /* Custom Scrollbar */
         .custom-scroll { overflow-y: auto; }
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
+        /* Animations */
         .fade-in { animation: fadeIn 0.7s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -41,12 +43,12 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- 1. CONFIGURATION & HOOKS ---
+        // Define React hooks globally
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- 2. BASE COMPONENTS (DEFINED FIRST) ---
+        // --- HELPER COMPONENTS (Defined FIRST to avoid ReferenceError) ---
 
-        // Icon Component
+        // Icon Component using Global Lucide
         const Icon = ({ name, size = 24, className = "" }) => {
             const iconRef = useRef(null);
             useEffect(() => {
@@ -75,6 +77,7 @@
                         e.target.nextSibling.style.display = 'flex'; 
                     }}
                 />
+                {/* Fallback in case image is missing */}
                 <div className="hidden flex-col leading-none" style={{display: 'none'}}>
                     <span className="text-3xl font-bold text-slate-900 tracking-tighter">BM<span className="text-red-600">T</span></span>
                     <span className="text-xs text-slate-500 tracking-widest uppercase">Diagnostics</span>
@@ -82,37 +85,7 @@
             </div>
         );
 
-        // CSS Bar Chart (Replaces Recharts)
-        const ProBarChart = ({ data }) => {
-            const maxValue = Math.max(...data.map(d => d.value));
-            return (
-                <div className="w-full h-64 pt-8 relative flex items-end justify-between gap-6 px-4 select-none">
-                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 px-4 pb-6 pt-8">
-                        <div className="w-full h-px bg-slate-100"></div>
-                        <div className="w-full h-px bg-slate-100"></div>
-                        <div className="w-full h-px bg-slate-100"></div>
-                        <div className="w-full h-px bg-slate-100"></div>
-                    </div>
-                    {data.map((item, index) => {
-                        const height = (item.value / maxValue) * 100;
-                        const colorClass = index === 0 ? 'bg-green-500' : (index === 1 ? 'bg-orange-400' : 'bg-red-500'); 
-                        return (
-                            <div key={index} className="flex-1 flex flex-col items-center h-full justify-end z-10 group relative">
-                                <div className="mb-2 text-sm font-bold text-slate-600 bg-white/80 px-2 py-1 rounded shadow-sm border border-slate-100">
-                                    ₪{item.value.toLocaleString()}
-                                </div>
-                                <div className="w-full max-w-[80px] bg-slate-100 rounded-t-lg relative h-full flex items-end overflow-hidden shadow-sm">
-                                    <div className={`w-full ${colorClass} transition-all duration-1000 ease-out opacity-90 group-hover:opacity-100`} style={{ height: `${height}%` }}></div>
-                                </div>
-                                <span className="text-xs font-medium text-slate-500 mt-3 text-center h-8 flex items-start">{item.name}</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            );
-        };
-
-        // Header
+        // Header Component (Defined BEFORE App)
         const Header = ({ currentSlide, totalSlides }) => (
             <div className="fixed top-0 left-0 right-0 h-24 bg-white/95 backdrop-blur-md shadow-sm z-50 flex items-center justify-between px-8 border-b border-gray-100 font-sans" dir="rtl">
                 <Logo />
@@ -127,14 +100,55 @@
             </div>
         );
 
-        // Slide Wrapper
+        // Slide Container
         const SlideContainer = ({ children }) => (
             <div className="w-full h-full flex flex-col pt-28 pb-24 px-4 md:px-16 max-w-7xl mx-auto overflow-y-auto custom-scroll">
                 {children}
             </div>
         );
 
-        // --- 3. SLIDE CONTENT COMPONENTS ---
+        // CSS-Based Bar Chart (Replaces Recharts to prevent errors)
+        const ProBarChart = ({ data }) => {
+            const maxValue = Math.max(...data.map(d => d.value));
+            return (
+                <div className="w-full h-64 pt-8 relative flex items-end justify-between gap-6 px-4 select-none">
+                    {/* Grid lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0 px-4 pb-6 pt-8">
+                        <div className="w-full h-px bg-slate-100"></div>
+                        <div className="w-full h-px bg-slate-100"></div>
+                        <div className="w-full h-px bg-slate-100"></div>
+                        <div className="w-full h-px bg-slate-100"></div>
+                    </div>
+
+                    {data.map((item, index) => {
+                        const height = (item.value / maxValue) * 100;
+                        const colorClass = index === 0 ? 'bg-green-500' : (index === 1 ? 'bg-orange-400' : 'bg-red-500'); 
+                        
+                        return (
+                            <div key={index} className="flex-1 flex flex-col items-center h-full justify-end z-10 group relative">
+                                {/* Value Label */}
+                                <div className="mb-2 text-sm font-bold text-slate-600 bg-white/80 px-2 py-1 rounded shadow-sm border border-slate-100">
+                                    ₪{item.value.toLocaleString()}
+                                </div>
+                                
+                                {/* Bar */}
+                                <div className="w-full max-w-[80px] bg-slate-100 rounded-t-lg relative h-full flex items-end overflow-hidden shadow-sm">
+                                    <div 
+                                        className={`w-full ${colorClass} transition-all duration-1000 ease-out opacity-90 group-hover:opacity-100`}
+                                        style={{ height: `${height}%` }}
+                                    ></div>
+                                </div>
+                                
+                                {/* Axis Label */}
+                                <span className="text-xs font-medium text-slate-500 mt-3 text-center h-8 flex items-start">{item.name}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        // --- SLIDE COMPONENTS (Defined BEFORE they are used in slides array) ---
 
         const CoverSlide = ({ nextSlide }) => (
             <div className="flex flex-col items-center justify-center h-full text-center fade-in px-4">
@@ -168,21 +182,21 @@
                                 <div className="bg-red-100 p-3 rounded-xl text-red-600"><Icon name="trending-up" size={24} /></div>
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800">צוואר הבקבוק בגילוי מוקדם</h3>
-                                    <p className="text-slate-600 mt-1">שיעורי ביצוע בדיקות סקר (FOB) נמוכים, הנובעים מחוסר נוחות ובירוקרטיה.</p>
+                                    <p className="text-slate-600 mt-1">שיעורי ביצוע בדיקות סקר (FOB) נמוכים בקרב אוכלוסיות בסיכון, הנובעים מחוסר נוחות ובירוקרטיה.</p>
                                 </div>
                             </li>
                             <li className="flex gap-4 items-start bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                                 <div className="bg-orange-100 p-3 rounded-xl text-orange-600"><Icon name="activity" size={24} /></div>
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800">עומס על המערכת</h3>
-                                    <p className="text-slate-600 mt-1">זמני המתנה ארוכים לגסטרואנטרולוגים עקב חוסר סינון יעיל.</p>
+                                    <p className="text-slate-600 mt-1">זמני המתנה ארוכים לגסטרואנטרולוגים וקולונוסקופיות, הנובעים מסינון לא יעיל של מטופלים.</p>
                                 </div>
                             </li>
                             <li className="flex gap-4 items-start bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
                                 <div className="bg-blue-100 p-3 rounded-xl text-blue-600"><Icon name="smartphone" size={24} /></div>
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800">העידן הדיגיטלי</h3>
-                                    <p className="text-slate-600 mt-1">המטופלים מצפים לפתרונות מידיים, נגישים וביתיים.</p>
+                                    <p className="text-slate-600 mt-1">המטופלים מצפים לפתרונות מידיים, נגישים וביתיים - בדיוק כפי שהתרגלו בתקופת הקורונה.</p>
                                 </div>
                             </li>
                         </ul>
@@ -190,11 +204,13 @@
                     <div className="flex-1 w-full bg-white p-8 rounded-3xl shadow-xl border border-gray-100 flex flex-col h-full justify-center">
                         <h3 className="text-2xl font-bold text-center mb-2 text-slate-800">העלות האמיתית של חוסר היענות</h3>
                         <p className="text-center text-sm text-slate-500 mb-6">עלות טיפול בסרטן מעי גס לפי שלבי גילוי</p>
+                        
                         <ProBarChart data={[
                             { name: 'גילוי מוקדם', value: 30000 },
                             { name: 'שלב 3', value: 180000 },
                             { name: 'שלב 4 (גרורתי)', value: 350000 }
                         ]} />
+
                         <div className="text-center bg-red-50 text-red-600 font-bold mt-8 py-3 rounded-xl text-sm border border-red-100">
                             <Icon name="alert-triangle" size={16} className="ml-2 inline"/> גילוי מאוחר עולה למערכת פי 10 יותר!
                         </div>
@@ -209,6 +225,7 @@
                     <h2 className="text-4xl font-bold text-slate-800">הפתרון הדיגיטלי: מעבדה בכף היד</h2>
                     <p className="text-xl text-slate-500 mt-2">טכנולוגיית AI המהפכנית המנגישה בדיקות מעבדה מדויקות לכל בית בישראל</p>
                 </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 fade-in h-full">
                     <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 text-center flex flex-col items-center hover:-translate-y-2 transition-transform duration-300">
                         <div className="bg-blue-100 p-5 rounded-full text-blue-600 mb-6"><Icon name="scan" size={48}/></div>
@@ -226,6 +243,7 @@
                         <p className="text-slate-600 leading-relaxed">התוצאות משודרות מוצפנות ישירות לתיק הרפואי (EMR). במקרה של תוצאה חיובית, המערכת יכולה להזמין אוטומטית תור.</p>
                     </div>
                 </div>
+                
                 <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 fade-in pb-4">
                      <div className="bg-slate-100 text-slate-700 px-8 py-5 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-sm border border-slate-200 text-lg">
                         <Icon name="check-circle-2" size={28} className="text-green-500"/> זמינות 24/7 ללא תלות במעבדה
@@ -254,22 +272,26 @@
                         <h2 className="text-4xl font-bold text-slate-800">FOB: מחשבון היענות וחיסכון</h2>
                         <p className="text-xl text-slate-500 mt-2">השפעת האפליקציה על גילוי מוקדם של סרטן המעי הגס</p>
                     </div>
+
                     <div className="flex flex-col lg:flex-row gap-10 fade-in h-full">
                         <div className="flex-1 bg-white p-8 rounded-3xl shadow-lg border border-blue-100 flex flex-col justify-center space-y-10">
                             <h3 className="font-bold text-xl flex items-center gap-2 text-slate-700 border-b pb-4"><Icon name="sliders-horizontal" /> פרמטרים לאוכלוסייה</h3>
+                            
                             <div>
                                 <label className="flex justify-between font-bold mb-3 text-slate-700">
                                     אוכלוסיית יעד (גילאי 50-74) <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">{targetPop.toLocaleString()}</span>
                                 </label>
                                 <input type="range" min="10000" max="200000" step="5000" value={targetPop} onChange={e=>setTargetPop(Number(e.target.value))} className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/>
                             </div>
+                            
                             <div>
                                 <label className="flex justify-between font-bold mb-3 text-slate-700">
-                                    היענות נוכחית <span className="text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">{baseCompliance}%</span>
+                                    היענות נוכחית (ללא אפליקציה) <span className="text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">{baseCompliance}%</span>
                                 </label>
                                 <input type="range" min="30" max="80" value={baseCompliance} onChange={e=>setBaseCompliance(Number(e.target.value))} className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-500"/>
                                 <div className="text-sm text-slate-400 mt-2">בדיקות מבוצעות כיום: {currentTests.toLocaleString()}</div>
                             </div>
+                            
                             <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
                                 <label className="flex justify-between font-bold mb-3 text-green-800">
                                     תוספת היענות עם BMT <span className="text-green-600 bg-white px-3 py-1 rounded-lg border border-green-200">+{appBoost}%</span>
@@ -277,6 +299,7 @@
                                 <input type="range" min="5" max="30" value={appBoost} onChange={e=>setAppBoost(Number(e.target.value))} className="w-full h-3 bg-green-200 rounded-lg appearance-none cursor-pointer accent-green-600"/>
                             </div>
                         </div>
+
                         <div className="flex-1 space-y-6 flex flex-col justify-center">
                             <div className="bg-slate-900 text-white p-10 rounded-3xl shadow-2xl relative overflow-hidden">
                                 <div className="relative z-10 space-y-6">
@@ -293,6 +316,7 @@
                                     </div>
                                 </div>
                             </div>
+
                             <div className="bg-white p-10 rounded-3xl shadow-lg border-t-8 border-green-500 text-center flex-1 flex flex-col justify-center items-center">
                                 <div className="text-slate-500 font-medium mb-3 text-lg">חיסכון כלכלי משוער (שנתי)</div>
                                 <div className="text-6xl font-black text-green-600 tracking-tight">₪{savings.toLocaleString()}</div>
@@ -307,7 +331,7 @@
         const CalprotectinSlide = () => {
             const [population, setPopulation] = useState(25000);
             
-            const savedColonoscopies = Math.floor(population * 0.8 * 0.5); 
+            const savedColonoscopies = Math.floor(population * 0.8 * 0.5); // Logic: 80% referrals, 50% saved (IBS)
             const moneySaved = (savedColonoscopies * 2500) - (Math.floor(population * 0.8) * 150);
 
             return (
@@ -316,11 +340,13 @@
                         <h2 className="text-4xl font-bold text-slate-800">Calprotectin: מסננת חכמה</h2>
                         <p className="text-xl text-slate-500 mt-2">פתרון לעומס במכוני הגסטרו: הבדלה בין IBD ל-IBS</p>
                     </div>
+
                     <div className="flex flex-col lg:flex-row gap-10 fade-in h-full">
                         <div className="flex-1 bg-white p-10 rounded-3xl shadow-lg border border-indigo-100 flex flex-col justify-center">
                             <h3 className="text-xl font-bold text-slate-800 mb-10 flex items-center gap-2 border-b pb-4">
                                 <Icon name="activity" className="text-indigo-600"/> תרחיש קליני (שנתי)
                             </h3>
+                            
                             <div className="space-y-10">
                                 <div>
                                     <label className="block text-lg font-bold text-slate-700 mb-4">
@@ -329,12 +355,14 @@
                                     <input type="range" min="1000" max="50000" step="1000" value={population} onChange={(e) => setPopulation(Number(e.target.value))} className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                                     <div className="text-right font-black text-indigo-600 text-4xl mt-3">{population.toLocaleString()}</div>
                                 </div>
+
                                 <div className="bg-indigo-50 p-6 rounded-2xl text-slate-700 border border-indigo-100">
                                     <strong className="block mb-3 text-indigo-800 text-lg flex items-center gap-2"><Icon name="alert-circle" size={20}/> הבעיה כיום:</strong>
                                     <p className="leading-relaxed text-lg">ללא בדיקת סקר זמינה, רוב המטופלים עם תסמונת המעי הרגיז (IBS) נשלחים לקולונוסקופיה מיותרת ויקרה, במקום לקבל טיפול בקהילה.</p>
                                 </div>
                             </div>
                         </div>
+
                         <div className="flex-1 flex flex-col gap-8 justify-center">
                             <div className="bg-white p-10 rounded-3xl shadow-lg border-r-8 border-indigo-500 flex justify-between items-center transition-transform hover:scale-[1.02]">
                                 <div>
@@ -344,6 +372,7 @@
                                 </div>
                                 <div className="bg-indigo-100 p-6 rounded-full text-indigo-600"><Icon name="microscope" size={48}/></div>
                             </div>
+                            
                             <div className="bg-white p-10 rounded-3xl shadow-lg border-r-8 border-green-500 flex justify-between items-center transition-transform hover:scale-[1.02]">
                                 <div>
                                     <div className="text-slate-500 font-bold mb-2 text-lg">חיסכון כספי ישיר לקופה</div>
@@ -362,8 +391,9 @@
             <SlideContainer>
                 <div className="mb-8 fade-in">
                     <h2 className="text-4xl font-bold text-slate-800">פורטפוליו בדיקות מקיף</h2>
-                    <p className="text-xl text-slate-500 mt-2">מעטפת דיאגנוסטית שלמה לבית ולמרפאה</p>
+                    <p className="text-xl text-slate-500 mt-2">מעטפת דיאגנוסטית שלמה לבית ולמרפאה (One-Stop-Shop)</p>
                 </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 fade-in h-full pb-8">
                     <div className="bg-white p-8 rounded-3xl shadow-lg border-t-8 border-teal-500 hover:shadow-2xl transition-shadow flex flex-col">
                         <div className="flex justify-between items-start mb-8">
@@ -376,18 +406,28 @@
                         <ul className="space-y-6 flex-1">
                             <li className="flex items-start gap-4 bg-slate-50 p-4 rounded-2xl">
                                 <div className="text-teal-500 mt-1"><Icon name="check-circle-2" size={24}/></div>
-                                <div><strong className="block text-xl text-slate-800">H. Pylori Ag</strong><span className="text-slate-600">זיהוי אנטיגן בצואה. מחליף תבחין נשיפה יקר.</span></div>
+                                <div>
+                                    <strong className="block text-xl text-slate-800">H. Pylori Ag</strong>
+                                    <span className="text-slate-600">זיהוי אנטיגן בצואה. בדיקת ה-Gold Standard שמחליפה את תבחין הנשיפה היקר והמסורבל. תשובה במקום.</span>
+                                </div>
                             </li>
                             <li className="flex items-start gap-4 bg-slate-50 p-4 rounded-2xl">
                                 <div className="text-teal-500 mt-1"><Icon name="check-circle-2" size={24}/></div>
-                                <div><strong className="block text-xl text-slate-800">Calprotectin</strong><span className="text-slate-600">סמן דלקת רגיש לניטור IBD וסינון ראשוני.</span></div>
+                                <div>
+                                    <strong className="block text-xl text-slate-800">Calprotectin</strong>
+                                    <span className="text-slate-600">סמן דלקת (Inflammation Marker) רגיש. חיוני לניטור חולי IBD ולסינון ראשוני של חשד ל-IBS.</span>
+                                </div>
                             </li>
                             <li className="flex items-start gap-4 bg-slate-50 p-4 rounded-2xl">
                                 <div className="text-teal-500 mt-1"><Icon name="check-circle-2" size={24}/></div>
-                                <div><strong className="block text-xl text-slate-800">Adeno/Rota</strong><span className="text-slate-600">פאנל ילדים לזיהוי מהיר של וירוסים.</span></div>
+                                <div>
+                                    <strong className="block text-xl text-slate-800">Adeno/Rota</strong>
+                                    <span className="text-slate-600">פאנל ילדים לזיהוי מהיר של גורמי שלשול ויראליים.</span>
+                                </div>
                             </li>
                         </ul>
                     </div>
+
                     <div className="bg-white p-8 rounded-3xl shadow-lg border-t-8 border-rose-500 hover:shadow-2xl transition-shadow flex flex-col">
                          <div className="flex justify-between items-start mb-8">
                             <div className="bg-rose-50 p-4 rounded-2xl text-rose-600"><Icon name="stethoscope" size={40}/></div>
@@ -423,6 +463,10 @@
             <SlideContainer>
                 <div className="flex flex-col items-center justify-center h-full fade-in px-4">
                     <div className="w-full max-w-6xl bg-slate-900 rounded-[3rem] shadow-2xl p-16 text-center text-white relative overflow-hidden">
+                        {/* Background Glows */}
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[120px] opacity-30 -mr-20 -mt-20 pointer-events-none"></div>
+                        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500 rounded-full blur-[120px] opacity-30 -ml-20 -mb-20 pointer-events-none"></div>
+
                         <div className="relative z-10">
                             <div className="inline-block bg-blue-600 p-5 rounded-2xl mb-8 shadow-lg shadow-blue-500/50"><Icon name="activity" size={56} className="text-white"/></div>
                             <h2 className="text-5xl md:text-7xl font-black mb-8 tracking-tight">העתיד של הדיאגנוסטיקה</h2>
@@ -432,11 +476,11 @@
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-right">
                                 <div className="bg-white/10 p-8 rounded-3xl border border-white/10 hover:bg-white/20 transition-colors backdrop-blur-md">
                                     <h4 className="text-2xl font-bold text-blue-400 mb-3">קליני</h4>
-                                    <p className="text-slate-300 text-lg">דיוק מעבדתי בבית המטופל ומניעת טעויות אנוש.</p>
+                                    <p className="text-slate-300 text-lg">דיוק מעבדתי בבית המטופל, הפחתת טעויות אנוש ופענוח מיידי.</p>
                                 </div>
                                 <div className="bg-white/10 p-8 rounded-3xl border border-white/10 hover:bg-white/20 transition-colors backdrop-blur-md">
                                     <h4 className="text-2xl font-bold text-green-400 mb-3">כלכלי</h4>
-                                    <p className="text-slate-300 text-lg">חיסכון עצום בעלויות טיפול אונקולוגי ובדיקות פולשניות מיותרות.</p>
+                                    <p className="text-slate-300 text-lg">חיסכון עצום בעלויות טיפול אונקולוגי (גילוי מוקדם) ובדיקות פולשניות מיותרות.</p>
                                 </div>
                                 <div className="bg-white/10 p-8 rounded-3xl border border-white/10 hover:bg-white/20 transition-colors backdrop-blur-md">
                                     <h4 className="text-2xl font-bold text-purple-400 mb-3">שירותי</h4>
@@ -449,14 +493,17 @@
             </SlideContainer>
         );
 
-        // --- 4. MAIN APP ---
+        // --- 4. MAIN APP LAYOUT ---
 
         const App = () => {
             const [currentSlide, setCurrentSlide] = useState(0);
             
+            // Remove loader when app renders
             useEffect(() => {
                 const loader = document.getElementById('loader');
                 if(loader) loader.style.display = 'none';
+                
+                // Re-scan for icons on slide change
                 if(window.lucide) window.lucide.createIcons();
             }, [currentSlide]);
 
