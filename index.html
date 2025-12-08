@@ -10,38 +10,47 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    <script src="https://unpkg.com/classnames/index.js"></script>
+
     <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
     
-    <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.min.js"></script>
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        /* Custom scrollbar styles form the original code */
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            background-color: #f8fafc;
+        }
+        /* Error Container Style */
+        #error-container {
+            display: none;
+            padding: 20px;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #b91c1c;
+            margin: 20px;
+            border-radius: 8px;
+            direction: ltr;
+            font-family: monospace;
+            white-space: pre-wrap;
+            z-index: 9999;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+        }
+
+        /* Original Scrollbar Styles */
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap');
         
-        body {
-            font-family: 'Heebo', sans-serif;
-            overflow: hidden; /* Prevent body scroll, let container scroll */
-        }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .custom-scroll::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scroll::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 10px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
-
-        .typing-indicator span {
-            animation: blink 1.4s infinite both;
-        }
+        .typing-indicator span { animation: blink 1.4s infinite both; }
         .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
         .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
         
@@ -50,47 +59,50 @@
             20% { opacity: 1; }
             100% { opacity: 0.2; }
         }
-        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body>
+    <div id="error-container"></div>
+    
     <div id="root"></div>
 
+    <script>
+        // Global Error Handler to catch "White Screen" issues
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorDiv = document.getElementById('error-container');
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = `<strong>Critical Error:</strong><br>${message}<br><small>${source}:${lineno}</small>`;
+        };
+    </script>
+
     <script type="text/babel">
-        // --- Library Destructuring (Simulating Imports) ---
+        // --- Safe Globals Check ---
+        try {
+            if (!window.React) throw new Error("React failed to load.");
+            if (!window.Recharts) throw new Error("Recharts failed to load.");
+            if (!window.lucideReact) throw new Error("Lucide Icons failed to load.");
+        } catch (e) {
+            throw e; // Trigger window.onerror
+        }
+
+        // --- Destructuring Globals ---
         const { useState, useMemo, useRef, useEffect } = React;
         const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } = Recharts;
+        
+        // Destructure Icons safely
         const { 
-            ChevronLeft, 
-            ChevronRight, 
-            Activity, 
-            Microscope, 
-            TrendingUp, 
-            ShieldCheck, 
-            Stethoscope, 
-            FlaskConical, 
-            ArrowRightCircle, 
-            CheckCircle2,
-            Smartphone,
-            Scan,
-            Database,
-            BrainCircuit,
-            HeartPulse,
-            Calculator,
-            Lock,
-            Sparkles,
-            Loader2,
-            MessageSquareQuote,
-            Bot,
-            X 
-        } = lucideReact;
+            ChevronLeft, ChevronRight, Activity, Microscope, TrendingUp, ShieldCheck, 
+            Stethoscope, FlaskConical, ArrowRightCircle, CheckCircle2, Smartphone, 
+            Scan, Database, BrainCircuit, HeartPulse, Calculator, Lock, Sparkles, 
+            Loader2, MessageSquareQuote, Bot, X 
+        } = window.lucideReact;
 
         // --- Gemini API Configuration ---
-        // TODO: ENTER YOUR API KEY HERE
+        // TODO: הכנס את המפתח שלך כאן
         const apiKey = ""; 
 
         const generateGeminiContent = async (prompt) => {
@@ -120,8 +132,7 @@
         const Header = ({ currentSlide, totalSlides }) => (
             <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-50 flex items-center justify-between px-8 border-b border-gray-100 font-sans" dir="rtl">
                 <div className="flex items-center gap-3">
-                    {/* Placeholder for Logo since local file won't exist */}
-                    <div className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center font-bold rounded">BMT</div>
+                    <div className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center font-bold rounded shadow-sm">BMT</div>
                     <span className="text-xl font-bold text-gray-800 tracking-tight hidden md:block">BMT Diagnostics</span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -141,8 +152,7 @@
             </div>
         );
 
-        // --- AI Components ---
-
+        // --- AI Assistant ---
         const AIAssistant = () => {
             const [isOpen, setIsOpen] = useState(false);
             const [messages, setMessages] = useState([
@@ -173,9 +183,7 @@
                 Context: You are embedded in a pitch deck for Health Maintenance Organizations (HMOs).
                 Products: FOB (Fecal Occult Blood) home test with AI app, Calprotectin home test (IBD/IBS differentiation), H. Pylori antigen test, Respiratory home tests (Covid/Flu/Strep).
                 Goal: Explain the value proposition (saving money, early detection, higher compliance) briefly and professionally in Hebrew.
-                
                 User question: "${userMsg}"
-                
                 Answer in Hebrew. Keep it short (max 2-3 sentences).
                 `;
 
@@ -186,7 +194,7 @@
             };
 
             return (
-                <>
+                <React.Fragment>
                     <button 
                         onClick={() => setIsOpen(!isOpen)}
                         className="fixed bottom-6 left-6 z-[60] bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform duration-300 flex items-center justify-center"
@@ -242,11 +250,11 @@
                             </div>
                         </div>
                     )}
-                </>
+                </React.Fragment>
             );
         };
 
-        // --- Slides ---
+        // --- Slide Components ---
 
         const CoverSlide = ({ nextSlide }) => (
             <SlideContainer className="justify-center items-center text-center">
@@ -397,18 +405,15 @@
         );
 
         const FOBEconomicsSlide = () => {
-            // FOB Calculator State
             const [targetPop, setTargetPop] = useState(50000);
-            const [baseCompliance, setBaseCompliance] = useState(60); // %
-            const [appBoost, setAppBoost] = useState(15); // %
+            const [baseCompliance, setBaseCompliance] = useState(60); 
+            const [appBoost, setAppBoost] = useState(15); 
             const [aiSummary, setAiSummary] = useState('');
             const [isAiLoading, setIsAiLoading] = useState(false);
             
-            // Constants
-            const CANCER_RATE = 0.003; // 0.3% conservative estimate for cancer detection
-            const SAVING_PER_CASE = 150000; // Average saving per early detection vs late stage
+            const CANCER_RATE = 0.003; 
+            const SAVING_PER_CASE = 150000; 
             
-            // Calculations
             const currentTests = Math.floor(targetPop * (baseCompliance / 100));
             const newTests = Math.floor(targetPop * ((baseCompliance + appBoost) / 100));
             const additionalTests = newTests - currentTests;
@@ -445,7 +450,6 @@
                         </div>
 
                         <div className="flex flex-col lg:flex-row gap-8 flex-1">
-                            {/* Controls */}
                             <div className="flex-1 bg-white p-6 rounded-2xl shadow-lg border border-blue-100 flex flex-col">
                                 <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                                     <ShieldCheck size={20} className="text-blue-600"/> פרמטרים לאוכלוסייה
@@ -498,7 +502,6 @@
                                 </div>
                             </div>
 
-                            {/* Results & AI */}
                             <div className="flex-1 space-y-6 flex flex-col">
                                 <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
                                     <div className="flex items-center gap-3 mb-4">
@@ -520,7 +523,6 @@
                                     <div className="text-5xl font-black text-green-600 tracking-tight">₪{totalSavings.toLocaleString()}</div>
                                 </div>
 
-                                {/* AI Section */}
                                 <div className="flex-1 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-5 flex flex-col">
                                     <div className="flex justify-between items-center mb-3">
                                         <div className="flex items-center gap-2 text-indigo-700 font-bold">
@@ -553,14 +555,13 @@
         };
 
         const CalprotectinSlide = () => {
-            // Calprotectin Calculator
             const [population, setPopulation] = useState(25000);
             const [aiSummary, setAiSummary] = useState('');
             const [isAiLoading, setIsAiLoading] = useState(false);
             
             const screeningPopulation = useMemo(() => population, [population]);
-            const potentialIBD = useMemo(() => Math.floor(screeningPopulation * 0.05), [screeningPopulation]); // 5% have issues
-            const savedColonoscopies = useMemo(() => Math.floor(potentialIBD * 0.5), [potentialIBD]); // 50% SAVING
+            const potentialIBD = useMemo(() => Math.floor(screeningPopulation * 0.05), [screeningPopulation]); 
+            const savedColonoscopies = useMemo(() => Math.floor(potentialIBD * 0.5), [potentialIBD]); 
             const moneySaved = useMemo(() => (savedColonoscopies * 2500) - (potentialIBD * 150), [savedColonoscopies, potentialIBD]);
 
             const generateSummary = async () => {
@@ -589,7 +590,6 @@
                         </div>
 
                         <div className="flex flex-col lg:flex-row gap-8 flex-1">
-                            {/* Controls */}
                             <div className="flex-1 bg-white p-6 rounded-2xl shadow-lg border border-indigo-100 flex flex-col">
                                 <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                                     <Activity size={20} className="text-indigo-600"/> הפחתת תורים מיותרים
@@ -617,7 +617,6 @@
                                 </div>
                             </div>
 
-                            {/* Results & AI */}
                             <div className="flex-1 flex flex-col gap-4">
                                 <div className="grid grid-cols-1 gap-4">
                                     <div className="bg-white p-6 rounded-2xl shadow-sm border-r-4 border-indigo-500 flex justify-between items-center">
@@ -636,7 +635,6 @@
                                     </div>
                                 </div>
 
-                                {/* AI Section */}
                                 <div className="flex-1 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-5 flex flex-col">
                                     <div className="flex justify-between items-center mb-3">
                                         <div className="flex items-center gap-2 text-indigo-700 font-bold">
@@ -676,7 +674,6 @@
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full pb-8 font-sans">
-                    {/* GI Panel */}
                     <div className="bg-white p-6 rounded-2xl shadow-md border-r-4 border-teal-500 hover:shadow-lg transition-shadow">
                         <div className="flex justify-between items-start mb-4">
                             <div className="bg-teal-100 p-3 rounded-xl text-teal-600"><FlaskConical size={32} /></div>
@@ -705,7 +702,6 @@
                         </ul>
                     </div>
 
-                    {/* Women's Health & Respiratory */}
                     <div className="bg-white p-6 rounded-2xl shadow-md border-r-4 border-rose-500 hover:shadow-lg transition-shadow">
                         <div className="flex justify-between items-start mb-4">
                             <div className="bg-rose-100 p-3 rounded-xl text-rose-600"><Stethoscope size={32} /></div>
@@ -804,7 +800,6 @@
 
                     <AIAssistant />
 
-                    {/* Navigation Footer */}
                     <div className="fixed bottom-0 left-0 right-0 h-20 bg-white border-t border-gray-200 flex items-center justify-between px-8 z-50">
                         <button 
                             onClick={prevSlide} 
