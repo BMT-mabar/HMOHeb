@@ -3,851 +3,396 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMT Diagnostics - Interactive Deck</title>
+    <title>BMT Diagnostics Presentation</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
     <style>
         body { font-family: 'Heebo', sans-serif; background-color: #f8fafc; overflow: hidden; }
-        #loading-screen {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: #ffffff; z-index: 9999;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            transition: opacity 0.5s;
-        }
-        .spinner {
-            width: 50px; height: 50px; border: 5px solid #e2e8f0;
-            border-top: 5px solid #2563eb; border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Error Box */
-        #global-error {
-            display: none; position: fixed; top: 20px; left: 20px; right: 20px;
-            background: #fef2f2; border: 2px solid #ef4444; color: #991b1b;
-            padding: 20px; border-radius: 12px; z-index: 10000;
-            font-family: monospace; direction: ltr; white-space: pre-wrap;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-
-        /* Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Loading Spinner */
+        #loader {
+            position: fixed; inset: 0; background: white; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .spin { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: s 1s linear infinite; }
+        @keyframes s { to { transform: rotate(360deg); } }
     </style>
 
-    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     
-    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.0/Recharts.min.js"></script>
     
-    <script src="https://unpkg.com/lucide-react@0.294.0/dist/umd/lucide-react.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
     
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <div class="spinner"></div>
-        <h2 class="mt-4 text-xl font-bold text-slate-700">טוען מצגת...</h2>
-        <p class="text-slate-500 text-sm mt-2">אנא המתן, מוריד ספריות גרפיות</p>
+    <div id="loader">
+        <div class="spin"></div>
+        <p class="mt-4 text-slate-500">טוען מצגת...</p>
     </div>
-
-    <div id="global-error"></div>
 
     <div id="root"></div>
 
-    <script>
-        // Global Error Handler
-        window.onerror = function(msg, url, line, col, error) {
-            document.getElementById('loading-screen').style.display = 'none';
-            const errorBox = document.getElementById('global-error');
-            errorBox.style.display = 'block';
-            errorBox.innerHTML = `<strong>CRITICAL ERROR:</strong>\n${msg}\n\nLocation: Line ${line}\nHint: Check your internet connection or API Key.`;
-            return false;
-        };
-    </script>
-
     <script type="text/babel">
-        // --- SAFE INITIALIZATION ---
-        // This block ensures variables exist before the app tries to use them
+        // --- Error Recovery & Setup ---
         
-        // 1. Check Libraries
-        if (!window.React || !window.ReactDOM || !window.Recharts || !window.lucideReact) {
-            throw new Error("One or more libraries failed to load. \nReact: " + !!window.React + "\nRecharts: " + !!window.Recharts + "\nLucide: " + !!window.lucideReact);
-        }
+        // Wait for libraries to be available
+        const waitForLibraries = () => {
+            return new Promise((resolve, reject) => {
+                let attempts = 0;
+                const check = setInterval(() => {
+                    attempts++;
+                    const hasReact = !!window.React;
+                    const hasRecharts = !!window.Recharts;
+                    const hasLucide = !!window.lucideReact;
 
-        // 2. Destructure Safely
-        const { useState, useMemo, useRef, useEffect } = React;
-        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } = Recharts;
-        
-        // Safe Icon Loader (Returns a fallback if icon is missing)
-        const getIcon = (name) => {
-            if (window.lucideReact && window.lucideReact[name]) {
-                return window.lucideReact[name];
-            }
-            return (props) => <span style={{display:'inline-block', width: props.size || 24, height: props.size || 24, background:'#ccc', borderRadius:4}}>?</span>;
+                    if (hasReact && hasRecharts && hasLucide) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                    
+                    if (attempts > 50) { // 5 seconds timeout
+                        clearInterval(check);
+                        console.warn("Libraries missing:", { React: hasReact, Recharts: hasRecharts, Lucide: hasLucide });
+                        // Don't reject, try to run anyway with fallbacks
+                        resolve(); 
+                    }
+                }, 100);
+            });
         };
 
-        const ChevronLeft = getIcon('ChevronLeft');
-        const ChevronRight = getIcon('ChevronRight');
-        const Activity = getIcon('Activity');
-        const Microscope = getIcon('Microscope');
-        const TrendingUp = getIcon('TrendingUp');
-        const ShieldCheck = getIcon('ShieldCheck');
-        const Stethoscope = getIcon('Stethoscope');
-        const FlaskConical = getIcon('FlaskConical');
-        const ArrowRightCircle = getIcon('ArrowRightCircle');
-        const CheckCircle2 = getIcon('CheckCircle2');
-        const Smartphone = getIcon('Smartphone');
-        const Scan = getIcon('Scan');
-        const Database = getIcon('Database');
-        const BrainCircuit = getIcon('BrainCircuit');
-        const HeartPulse = getIcon('HeartPulse');
-        const Calculator = getIcon('Calculator');
-        const Lock = getIcon('Lock');
-        const Sparkles = getIcon('Sparkles');
-        const Loader2 = getIcon('Loader2');
-        const MessageSquareQuote = getIcon('MessageSquareQuote');
-        const Bot = getIcon('Bot');
-        const X = getIcon('X');
-
-        // --- GEMINI CONFIGURATION ---
-        // TODO: הכנס את המפתח שלך כאן כדי שהצ'אט יעבוד
-        const apiKey = ""; 
-
-        const generateGeminiContent = async (prompt) => {
-            if (!apiKey) return "נא להגדיר מפתח API בקוד (const apiKey).";
+        // --- Main Logic Start ---
+        waitForLibraries().then(() => {
+            // Hide Loader
+            document.getElementById('loader').style.display = 'none';
             
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "לא התקבלה תשובה תקינה מהמערכת.";
-            } catch (error) {
-                console.error("Gemini API Error:", error);
-                return "אירעה שגיאה. בדוק חיבור לרשת או את מפתח ה-API.";
-            }
-        };
+            // --- Destructuring ---
+            const { useState, useMemo, useRef, useEffect } = React;
+            
+            // Recharts fallback to empty object if missing to prevent crash
+            const Recharts = window.Recharts || {};
+            const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } = Recharts;
 
-        // --- COMPONENTS ---
+            // Lucide fallback function
+            const getIcon = (name) => {
+                if (window.lucideReact && window.lucideReact[name]) return window.lucideReact[name];
+                return () => <span className="text-xs bg-gray-200 px-1 rounded">Icon</span>;
+            };
 
-        const Header = ({ currentSlide, totalSlides }) => (
-            <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-50 flex items-center justify-between px-8 border-b border-gray-100 font-sans" dir="rtl">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center font-bold rounded shadow-sm">BMT</div>
-                    <span className="text-xl font-bold text-gray-800 tracking-tight hidden md:block">BMT Diagnostics</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:flex gap-1">
-                        {Array.from({ length: totalSlides }).map((_, i) => (
-                            <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
-                        ))}
+            // Map all icons
+            const ChevronLeft = getIcon('ChevronLeft');
+            const ChevronRight = getIcon('ChevronRight');
+            const Activity = getIcon('Activity');
+            const Microscope = getIcon('Microscope');
+            const TrendingUp = getIcon('TrendingUp');
+            const ShieldCheck = getIcon('ShieldCheck');
+            const Stethoscope = getIcon('Stethoscope');
+            const FlaskConical = getIcon('FlaskConical');
+            const ArrowRightCircle = getIcon('ArrowRightCircle');
+            const CheckCircle2 = getIcon('CheckCircle2');
+            const Smartphone = getIcon('Smartphone');
+            const Scan = getIcon('Scan');
+            const Database = getIcon('Database');
+            const BrainCircuit = getIcon('BrainCircuit');
+            const HeartPulse = getIcon('HeartPulse');
+            const Calculator = getIcon('Calculator');
+            const Lock = getIcon('Lock');
+            const Sparkles = getIcon('Sparkles');
+            const Loader2 = getIcon('Loader2');
+            const MessageSquareQuote = getIcon('MessageSquareQuote');
+            const Bot = getIcon('Bot');
+            const X = getIcon('X');
+
+            // --- Gemini API Key ---
+            const apiKey = ""; 
+
+            const generateGeminiContent = async (prompt) => {
+                if (!apiKey) return "נא להגדיר מפתח API בקוד.";
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    if (!response.ok) throw new Error('Network error');
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "שגיאה בתשובה.";
+                } catch (error) {
+                    console.error("Gemini Error:", error);
+                    return "אירעה שגיאה בתקשורת.";
+                }
+            };
+
+            // --- Components ---
+
+            const Header = ({ currentSlide, totalSlides }) => (
+                <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-50 flex items-center justify-between px-8 border-b border-gray-100 font-sans" dir="rtl">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center font-bold rounded shadow-sm">BMT</div>
+                        <span className="text-xl font-bold text-gray-800 tracking-tight hidden md:block">BMT Diagnostics</span>
                     </div>
-                    <span className="text-sm font-medium text-gray-500">שקף {currentSlide + 1} מתוך {totalSlides}</span>
-                </div>
-            </div>
-        );
-
-        const SlideContainer = ({ children, className = "" }) => (
-            <div className={`w-full h-full flex flex-col pt-20 pb-24 px-4 md:px-16 max-w-7xl mx-auto overflow-y-auto custom-scroll ${className}`}>
-                {children}
-            </div>
-        );
-
-        // --- AI Assistant ---
-        const AIAssistant = () => {
-            const [isOpen, setIsOpen] = useState(false);
-            const [messages, setMessages] = useState([
-                { role: 'system', text: 'שלום! אני העוזר הווירטואלי של BMT. איך אני יכול לעזור לך להבין את הפתרונות שלנו היום?' }
-            ]);
-            const [input, setInput] = useState('');
-            const [isTyping, setIsTyping] = useState(false);
-            const chatEndRef = useRef(null);
-
-            const scrollToBottom = () => {
-                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            };
-
-            useEffect(() => {
-                scrollToBottom();
-            }, [messages, isOpen]);
-
-            const handleSend = async () => {
-                if (!input.trim()) return;
-                
-                const userMsg = input;
-                setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-                setInput('');
-                setIsTyping(true);
-
-                const prompt = `
-                You are an AI sales assistant for BMT Diagnostics (an Israeli medical diagnostics company).
-                Context: You are embedded in a pitch deck for Health Maintenance Organizations (HMOs).
-                Products: FOB (Fecal Occult Blood) home test with AI app, Calprotectin home test (IBD/IBS differentiation), H. Pylori antigen test, Respiratory home tests (Covid/Flu/Strep).
-                Goal: Explain the value proposition (saving money, early detection, higher compliance) briefly and professionally in Hebrew.
-                User question: "${userMsg}"
-                Answer in Hebrew. Keep it short (max 2-3 sentences).
-                `;
-
-                const reply = await generateGeminiContent(prompt);
-                
-                setIsTyping(false);
-                setMessages(prev => [...prev, { role: 'system', text: reply }]);
-            };
-
-            return (
-                <React.Fragment>
-                    <button 
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="fixed bottom-6 left-6 z-[60] bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform duration-300 flex items-center justify-center"
-                    >
-                        {isOpen ? <X size={24} /> : <Bot size={24} />}
-                    </button>
-
-                    {isOpen && (
-                        <div className="fixed bottom-24 left-6 z-[60] w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col font-sans" style={{height: '450px'}} dir="rtl">
-                            <div className="bg-indigo-600 p-4 text-white flex items-center gap-2">
-                                <Sparkles size={18} />
-                                <span className="font-bold">BMT AI Consultant</span>
-                            </div>
-                            
-                            <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-4">
-                                {messages.map((msg, idx) => (
-                                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
-                                            msg.role === 'user' 
-                                                ? 'bg-white border border-gray-200 text-slate-800 rounded-br-none' 
-                                                : 'bg-indigo-600 text-white rounded-bl-none shadow-md'
-                                        }`}>
-                                            {msg.text}
-                                        </div>
-                                    </div>
-                                ))}
-                                {isTyping && (
-                                    <div className="flex justify-end">
-                                        <div className="bg-indigo-600 text-white p-3 rounded-2xl rounded-bl-none shadow-md text-sm typing-indicator">
-                                            <span>●</span><span>●</span><span>●</span>
-                                        </div>
-                                    </div>
-                                )}
-                                <div ref={chatEndRef} />
-                            </div>
-
-                            <div className="p-3 bg-white border-t border-gray-100 flex gap-2">
-                                <input 
-                                    type="text" 
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                                    placeholder="שאל אותי משהו..."
-                                    className="flex-1 px-4 py-2 bg-slate-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                                <button 
-                                    onClick={handleSend}
-                                    disabled={isTyping}
-                                    className="bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 disabled:opacity-50"
-                                >
-                                    <ArrowRightCircle size={20} style={{transform: 'rotate(180deg)'}} />
-                                </button>
-                            </div>
+                    <div className="flex items-center gap-4">
+                        <div className="hidden md:flex gap-1">
+                            {Array.from({ length: totalSlides }).map((_, i) => (
+                                <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
+                            ))}
                         </div>
-                    )}
-                </React.Fragment>
+                        <span className="text-sm font-medium text-gray-500">שקף {currentSlide + 1} מתוך {totalSlides}</span>
+                    </div>
+                </div>
             );
-        };
 
-        // --- SLIDES ---
-
-        const CoverSlide = ({ nextSlide }) => (
-            <SlideContainer className="justify-center items-center text-center">
-                <div className="bg-blue-50 text-blue-600 px-4 py-1 rounded-full text-sm font-semibold mb-6 animate-pulse">
-                    מהפכת הדיאגנוסטיקה הביתית
+            const SlideContainer = ({ children, className = "" }) => (
+                <div className={`w-full h-full flex flex-col pt-20 pb-24 px-4 md:px-16 max-w-7xl mx-auto overflow-y-auto custom-scroll ${className}`}>
+                    {children}
                 </div>
-                <h1 className="text-5xl md:text-7xl font-black text-slate-900 mb-6 leading-tight font-sans">
-                    שותפות אסטרטגית <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">לרפואה מונעת דיגיטלית</span>
-                </h1>
-                <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mb-10 font-light font-sans">
-                    פתרון AI מתקדם המשלב בדיקות ביתיות מדויקות עם אפליקציה חכמה.
-                    העלאת היענות (Compliance), גילוי מוקדם מציל חיים וחיסכון תפעולי עצום.
-                </p>
-                <button onClick={nextSlide} className="group bg-blue-600 hover:bg-blue-700 text-white text-xl px-10 py-4 rounded-full font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center gap-3 font-sans">
-                    גלה את הפתרון
-                    <ArrowRightCircle className="group-hover:-translate-x-1 transition-transform" />
-                </button>
-            </SlideContainer>
-        );
+            );
 
-        const StrategySlide = () => (
-            <SlideContainer>
-                <div className="flex flex-col md:flex-row gap-12 items-center h-full font-sans">
-                    <div className="flex-1 space-y-6">
-                        <h2 className="text-4xl font-bold text-slate-800 border-r-4 border-blue-600 pr-4">האתגר הלאומי: מניעה</h2>
-                        <ul className="space-y-6">
-                            <li className="flex gap-4 items-start">
-                                <div className="bg-red-100 p-2 rounded-lg text-red-600 mt-1"><TrendingUp size={24} /></div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-slate-700">צוואר הבקבוק בגילוי מוקדם</h3>
-                                    <p className="text-slate-600">שיעורי ביצוע בדיקות סקר (FOB) נמוכים בקרב אוכלוסיות בסיכון, הנובעים מחוסר נוחות ובירוקרטיה.</p>
+            const AIAssistant = () => {
+                const [isOpen, setIsOpen] = useState(false);
+                const [messages, setMessages] = useState([{ role: 'system', text: 'שלום! אני העוזר הווירטואלי של BMT. איך אני יכול לעזור?' }]);
+                const [input, setInput] = useState('');
+                const [isTyping, setIsTyping] = useState(false);
+                const chatEndRef = useRef(null);
+
+                useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages, isOpen]);
+
+                const handleSend = async () => {
+                    if (!input.trim()) return;
+                    const userMsg = input;
+                    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+                    setInput('');
+                    setIsTyping(true);
+                    
+                    const prompt = `You are a sales assistant for BMT Diagnostics. Answer in Hebrew. Question: ${userMsg}`;
+                    const reply = await generateGeminiContent(prompt);
+                    
+                    setIsTyping(false);
+                    setMessages(prev => [...prev, { role: 'system', text: reply }]);
+                };
+
+                return (
+                    <React.Fragment>
+                        <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 left-6 z-[60] bg-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform">
+                            {isOpen ? <X size={24} /> : <Bot size={24} />}
+                        </button>
+                        {isOpen && (
+                            <div className="fixed bottom-24 left-6 z-[60] w-80 md:w-96 bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col h-[450px]" dir="rtl">
+                                <div className="bg-indigo-600 p-4 text-white flex items-center gap-2 rounded-t-2xl font-bold"><Sparkles size={18}/> BMT AI</div>
+                                <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-4">
+                                    {messages.map((msg, idx) => (
+                                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                                            <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-white border text-slate-800' : 'bg-indigo-600 text-white'}`}>{msg.text}</div>
+                                        </div>
+                                    ))}
+                                    {isTyping && <div className="text-xs text-gray-400 text-center">מקליד...</div>}
+                                    <div ref={chatEndRef}/>
                                 </div>
-                            </li>
-                            <li className="flex gap-4 items-start">
-                                <div className="bg-orange-100 p-2 rounded-lg text-orange-600 mt-1"><Activity size={24} /></div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-slate-700">עומס על המערכת</h3>
-                                    <p className="text-slate-600">זמני המתנה ארוכים לגסטרואנטרולוגים וקולונוסקופיות, הנובעים מסינון לא יעיל של מטופלים.</p>
+                                <div className="p-3 border-t flex gap-2">
+                                    <input value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} className="flex-1 px-4 py-2 bg-slate-100 rounded-full text-sm outline-none" placeholder="שאל משהו..." />
+                                    <button onClick={handleSend} className="bg-indigo-600 text-white p-2 rounded-full"><ArrowRightCircle size={20} style={{transform:'rotate(180deg)'}}/></button>
                                 </div>
-                            </li>
-                            <li className="flex gap-4 items-start">
-                                <div className="bg-blue-100 p-2 rounded-lg text-blue-600 mt-1"><Smartphone size={24} /></div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-slate-700">העידן הדיגיטלי</h3>
-                                    <p className="text-slate-600">המטופלים מצפים לפתרונות מידיים, נגישים וביתיים - בדיוק כפי שהתרגלו בתקופת הקורונה.</p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                    <div className="flex-1 w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-                        <div className="text-center mb-6">
-                            <h3 className="text-2xl font-bold text-slate-800">העלות האמיתית של חוסר היענות</h3>
-                            <p className="text-sm text-slate-500">עלות טיפול בסרטן מעי גס לפי שלבי גילוי</p>
+                            </div>
+                        )}
+                    </React.Fragment>
+                );
+            };
+
+            // --- Slides Definitions ---
+
+            const CoverSlide = ({ nextSlide }) => (
+                <SlideContainer className="justify-center items-center text-center">
+                    <div className="bg-blue-50 text-blue-600 px-4 py-1 rounded-full text-sm font-semibold mb-6">מהפכת הדיאגנוסטיקה הביתית</div>
+                    <h1 className="text-5xl md:text-7xl font-black text-slate-900 mb-6 font-sans">
+                        שותפות אסטרטגית <br/><span className="text-blue-600">לרפואה מונעת דיגיטלית</span>
+                    </h1>
+                    <p className="text-xl text-slate-600 max-w-3xl mb-10 font-light">פתרון AI מתקדם המשלב בדיקות ביתיות מדויקות עם אפליקציה חכמה.</p>
+                    <button onClick={nextSlide} className="bg-blue-600 text-white text-xl px-10 py-4 rounded-full font-bold shadow-lg flex items-center gap-3">
+                        גלה את הפתרון <ArrowRightCircle />
+                    </button>
+                </SlideContainer>
+            );
+
+            const StrategySlide = () => (
+                <SlideContainer>
+                    <div className="flex flex-col md:flex-row gap-12 items-center h-full">
+                        <div className="flex-1 space-y-6">
+                            <h2 className="text-4xl font-bold text-slate-800 border-r-4 border-blue-600 pr-4">האתגר הלאומי</h2>
+                            <ul className="space-y-6">
+                                <li className="flex gap-4"><div className="bg-red-100 p-2 rounded text-red-600"><TrendingUp /></div><div><h3 className="font-bold">גילוי מוקדם</h3><p>שיעורי ביצוע נמוכים בגלל חוסר נוחות.</p></div></li>
+                                <li className="flex gap-4"><div className="bg-orange-100 p-2 rounded text-orange-600"><Activity /></div><div><h3 className="font-bold">עומס תורים</h3><p>המתנה ארוכה לגסטרואנטרולוגים.</p></div></li>
+                            </ul>
                         </div>
-                        <div className="h-64 w-full" dir="ltr">
+                        <div className="flex-1 w-full bg-white p-8 rounded-2xl shadow-xl h-64">
+                            <h3 className="text-center font-bold mb-4">עלות טיפול בסרטן (₪)</h3>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={[
-                                    { name: 'גילוי מוקדם', cost: 30000 },
-                                    { name: 'שלב 3', cost: 180000 },
-                                    { name: 'שלב 4 (גרורתי)', cost: 350000 }
-                                ]}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" tick={{fontSize: 12}} />
-                                    <YAxis hide />
-                                    <Tooltip formatter={(value) => `₪${value.toLocaleString()}`} cursor={{fill: '#f1f5f9'}} />
-                                    <Bar dataKey="cost" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={60} />
+                                <BarChart data={[{name:'מוקדם', cost:30000}, {name:'מאוחר', cost:350000}]}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+                                    <XAxis dataKey="name" />
+                                    <Tooltip />
+                                    <Bar dataKey="cost" fill="#ef4444" radius={[4,4,0,0]} barSize={60}/>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
-                </div>
-            </SlideContainer>
-        );
+                </SlideContainer>
+            );
 
-        const DigitalSolutionSlide = () => (
-            <SlideContainer>
-                <div className="mb-10 text-center font-sans">
-                    <h2 className="text-4xl font-bold text-slate-800">הפתרון הדיגיטלי: מעבדה בכף היד</h2>
-                    <p className="text-xl text-slate-500 mt-2">טכנולוגיית AI המהפכנית המנגישה בדיקות מעבדה מדויקות לכל בית בישראל</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 h-full">
-                    {/* Step 1 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex flex-col items-center text-center relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
-                        <div className="bg-blue-100 p-4 rounded-full text-blue-600 mb-6 group-hover:scale-110 transition-transform">
-                            <Scan size={40} />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-800 mb-3">סריקה פשוטה</h3>
-                        <p className="text-slate-600">
-                            המטופל מבצע את הבדיקה בביתו וסורק את הקסטה באמצעות אפליקציה ייעודית.
-                            ממשק משתמש אינטואיטיבי המותאם גם לגיל השלישי, עם הנחיות קוליות וויזואליות בעברית.
-                        </p>
-                    </div>
-
-                    {/* Step 2 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex flex-col items-center text-center relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
-                        <div className="bg-indigo-100 p-4 rounded-full text-indigo-600 mb-6 group-hover:scale-110 transition-transform">
-                            <BrainCircuit size={40} />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-800 mb-3">פענוח AI בזמן אמת</h3>
-                        <p className="text-slate-600">
-                            אלגוריתם ראייה ממוחשבת (Computer Vision) מנתח את תוצאת הבדיקה בדיוק העולה על העין האנושית.
-                            מניעת טעויות קריאה (Faint Lines) וזיהוי מיידי של תוצאות חריגות.
-                        </p>
-                    </div>
-
-                    {/* Step 3 */}
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex flex-col items-center text-center relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-teal-500"></div>
-                        <div className="bg-teal-100 p-4 rounded-full text-teal-600 mb-6 group-hover:scale-110 transition-transform">
-                            <Database size={40} />
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-800 mb-3">סגירת מעגל טיפולי</h3>
-                        <p className="text-slate-600">
-                            התוצאות משודרות מוצפנות ישירות לתיק הרפואי (EMR) של הקופה.
-                            במקרה של תוצאה חיובית, המערכת יכולה להזמין אוטומטית תור להמשך בירור או קולונוסקופיה.
-                        </p>
-                    </div>
-                </div>
-                
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-slate-100 rounded-2xl p-6 flex flex-col gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-green-500 text-white p-2 rounded-full"><CheckCircle2 /></div>
-                            <span className="font-bold text-slate-700">זמינות 24/7 ללא תלות במעבדה</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="bg-green-500 text-white p-2 rounded-full"><CheckCircle2 /></div>
-                            <span className="font-bold text-slate-700">קיט בדיקה היגייני ללא מגע</span>
-                        </div>
-                    </div>
-                    
-                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-start gap-4">
-                        <div className="bg-blue-500 text-white p-2 rounded-full mt-1 flex-shrink-0"><Lock size={20} /></div>
-                        <div>
-                            <h4 className="font-bold text-slate-800 text-lg mb-1">הגנת פרטיות מקסימלית</h4>
-                            <p className="text-slate-600 text-sm">
-                                המערכת <span className="font-bold">אינה שומרת</span> ואינה נחשפת למידע אישי של המטופל (PII).
-                                כל העיבוד מתבצע בצורה אנונימית ומוצפנת בהתאם לתקני GDPR ו-HIPAA המחמירים.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </SlideContainer>
-        );
-
-        const FOBEconomicsSlide = () => {
-            const [targetPop, setTargetPop] = useState(50000);
-            const [baseCompliance, setBaseCompliance] = useState(60); 
-            const [appBoost, setAppBoost] = useState(15); 
-            const [aiSummary, setAiSummary] = useState('');
-            const [isAiLoading, setIsAiLoading] = useState(false);
-            
-            const CANCER_RATE = 0.003; 
-            const SAVING_PER_CASE = 150000; 
-            
-            const currentTests = Math.floor(targetPop * (baseCompliance / 100));
-            const newTests = Math.floor(targetPop * ((baseCompliance + appBoost) / 100));
-            const additionalTests = newTests - currentTests;
-            const additionalDetections = Math.floor(additionalTests * CANCER_RATE);
-            const totalSavings = additionalDetections * SAVING_PER_CASE;
-
-            const generateSummary = async () => {
-                setIsAiLoading(true);
-                const prompt = `
-                פעל כיועץ אסטרטגי בכיר לארגוני בריאות המציג בפני סמנכ"ל כספים.
-                נתונים:
-                אוכלוסיית יעד: ${targetPop.toLocaleString()}
-                היענות בסיס: ${baseCompliance}%
-                עלייה בהיענות עקב שימוש באפליקציה: ${appBoost}%
-                בדיקות נוספות שבוצעו: ${additionalTests.toLocaleString()}
-                מקרים נוספים שהתגלו מוקדם: ${additionalDetections}
-                חיסכון שנתי כולל: ${totalSavings.toLocaleString()} ש"ח.
-                
-                כתוב סיכום מנהלים קצר (עד 3 משפטים) ומשכנע בעברית, המדגיש את ה-ROI והאימפקט הבריאותי. אל תשתמש בכוכביות.
-                `;
-                const result = await generateGeminiContent(prompt);
-                setAiSummary(result);
-                setIsAiLoading(false);
-            };
-
-            return (
+            const DigitalSolutionSlide = () => (
                 <SlideContainer>
-                    <div className="flex flex-col h-full font-sans">
-                        <div className="mb-6 flex justify-between items-end">
-                            <div>
-                                <h2 className="text-4xl font-bold text-slate-800">FOB: מחשבון היענות וחיסכון</h2>
-                                <p className="text-xl text-slate-500">השפעת האפליקציה על גילוי מוקדם של סרטן המעי הגס</p>
-                            </div>
+                    <div className="mb-10 text-center"><h2 className="text-4xl font-bold">הפתרון הדיגיטלי</h2></div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                        <div className="bg-white p-6 rounded-3xl shadow border flex flex-col items-center">
+                            <div className="bg-blue-100 p-4 rounded-full text-blue-600 mb-4"><Scan size={40}/></div>
+                            <h3 className="text-2xl font-bold mb-2">סריקה</h3>
+                            <p>ביצוע בדיקה בבית וסריקה באפליקציה.</p>
                         </div>
-
-                        <div className="flex flex-col lg:flex-row gap-8 flex-1">
-                            <div className="flex-1 bg-white p-6 rounded-2xl shadow-lg border border-blue-100 flex flex-col">
-                                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                    <ShieldCheck size={20} className="text-blue-600"/> פרמטרים לאוכלוסייה
-                                </h3>
-                                
-                                <div className="space-y-6 flex-1">
-                                    <div>
-                                        <label className="flex justify-between text-sm font-medium text-slate-700 mb-2">
-                                            <span>אוכלוסיית יעד (גילאי 50-74)</span>
-                                            <span className="text-blue-600 font-bold">{targetPop.toLocaleString()}</span>
-                                        </label>
-                                        <input 
-                                            type="range" min="10000" max="200000" step="5000" 
-                                            value={targetPop} onChange={(e) => setTargetPop(Number(e.target.value))}
-                                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 dir-ltr"
-                                        />
-                                    </div>
-
-                                    <div className="bg-slate-50 p-4 rounded-xl">
-                                        <label className="flex justify-between text-sm font-medium text-slate-700 mb-2">
-                                            <span>שיעור היענות נוכחי (ללא אפליקציה)</span>
-                                            <span className="text-slate-600 font-bold">{baseCompliance}%</span>
-                                        </label>
-                                        <input 
-                                            type="range" min="30" max="80" step="1" 
-                                            value={baseCompliance} onChange={(e) => setBaseCompliance(Number(e.target.value))}
-                                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-400 dir-ltr"
-                                        />
-                                        <div className="flex justify-between mt-2 text-xs text-slate-500 border-t border-slate-200 pt-2">
-                                            <span>בדיקות מבוצעות כיום:</span>
-                                            <span className="font-bold">{currentTests.toLocaleString()}</span>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="flex justify-between text-sm font-medium text-slate-700 mb-2">
-                                            <span>תוספת היענות צפויה עם האפליקציה</span>
-                                            <span className="text-green-600 font-bold">+{appBoost}%</span>
-                                        </label>
-                                        <input 
-                                            type="range" min="5" max="30" step="1" 
-                                            value={appBoost} onChange={(e) => setAppBoost(Number(e.target.value))}
-                                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-green-500 dir-ltr"
-                                        />
-                                        <div className="flex justify-between mt-2 text-xs text-green-600">
-                                            <span>סה"כ בדיקות עם אפליקציה:</span>
-                                            <span className="font-bold">{newTests.toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 space-y-6 flex flex-col">
-                                <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <HeartPulse className="text-rose-500" />
-                                        <h3 className="text-lg font-bold">השורה התחתונה: הצלת חיים</h3>
-                                    </div>
-                                    <div className="flex justify-between items-end border-b border-slate-700 pb-4 mb-4">
-                                        <span className="text-slate-300">בדיקות סקר <span className="text-green-400 font-bold">נוספות</span> שבוצעו</span>
-                                        <span className="text-3xl font-black text-blue-400">+{additionalTests.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between items-end">
-                                        <span className="text-slate-300">מקרים שהתגלו מוקדם (מנעו שלב קשה)</span>
-                                        <span className="text-3xl font-black text-green-400">~{additionalDetections}</span>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-green-500 text-center">
-                                    <div className="text-sm text-slate-500 mb-2">חיסכון כלכלי משוער לטיפול (בשנה אחת)</div>
-                                    <div className="text-5xl font-black text-green-600 tracking-tight">₪{totalSavings.toLocaleString()}</div>
-                                </div>
-
-                                <div className="flex-1 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-5 flex flex-col">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <div className="flex items-center gap-2 text-indigo-700 font-bold">
-                                            <Sparkles size={18} />
-                                            <span>ניתוח עסקי חכם (Gemini AI)</span>
-                                        </div>
-                                        <button 
-                                            onClick={generateSummary}
-                                            disabled={isAiLoading}
-                                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-full shadow transition-all flex items-center gap-1 disabled:opacity-50"
-                                        >
-                                            {isAiLoading ? <Loader2 size={14} className="animate-spin" /> : <MessageSquareQuote size={14} />}
-                                            {isAiLoading ? 'מנתח נתונים...' : 'צור סיכום מנהלים'}
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="flex-1 bg-white/60 rounded-xl p-3 text-sm text-slate-700 leading-relaxed overflow-y-auto">
-                                        {aiSummary ? (
-                                            <p className="animate-[fadeIn_0.5s_ease-out]">{aiSummary}</p>
-                                        ) : (
-                                            <p className="text-slate-400 italic text-center mt-2">לחץ על הכפתור לקבלת ניתוח מבוסס AI של הנתונים הנוכחיים...</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="bg-white p-6 rounded-3xl shadow border flex flex-col items-center">
+                            <div className="bg-indigo-100 p-4 rounded-full text-indigo-600 mb-4"><BrainCircuit size={40}/></div>
+                            <h3 className="text-2xl font-bold mb-2">פענוח AI</h3>
+                            <p>דיוק העולה על העין האנושית ומניעת טעויות.</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-3xl shadow border flex flex-col items-center">
+                            <div className="bg-teal-100 p-4 rounded-full text-teal-600 mb-4"><Database size={40}/></div>
+                            <h3 className="text-2xl font-bold mb-2">סגירת מעגל</h3>
+                            <p>שידור מוצפן לתיק הרפואי וקביעת תור.</p>
                         </div>
                     </div>
                 </SlideContainer>
             );
-        };
 
-        const CalprotectinSlide = () => {
-            const [population, setPopulation] = useState(25000);
-            const [aiSummary, setAiSummary] = useState('');
-            const [isAiLoading, setIsAiLoading] = useState(false);
-            
-            const screeningPopulation = useMemo(() => population, [population]);
-            const potentialIBD = useMemo(() => Math.floor(screeningPopulation * 0.05), [screeningPopulation]); 
-            const savedColonoscopies = useMemo(() => Math.floor(potentialIBD * 0.5), [potentialIBD]); 
-            const moneySaved = useMemo(() => (savedColonoscopies * 2500) - (potentialIBD * 150), [savedColonoscopies, potentialIBD]);
-
-            const generateSummary = async () => {
-                setIsAiLoading(true);
-                const prompt = `
-                פעל כיועץ רפואי-כלכלי לקופת חולים.
-                נתונים לניתוח השפעת בדיקת Calprotectin:
-                פניות שנתיות עם כאבי בטן: ${population.toLocaleString()}
-                מטופלים שנזקקו לבירור (5%): ${potentialIBD.toLocaleString()}
-                קולונוסקופיות שנמנעו (50% מהבירורים): ${savedColonoscopies.toLocaleString()}
-                חיסכון כספי ישיר: ${moneySaved.toLocaleString()} ש"ח.
+            const FOBEconomicsSlide = () => {
+                const [targetPop, setTargetPop] = useState(50000);
+                const [baseCompliance, setBaseCompliance] = useState(60);
+                const [appBoost, setAppBoost] = useState(15);
+                const [aiSummary, setAiSummary] = useState('');
+                const [loading, setLoading] = useState(false);
                 
-                כתוב טיעון קצר (עד 3 משפטים) למנהל הרפואי של הקופה למה כדאי להכניס את הבדיקה לסל, תוך דגש על הקטנת עומס תורים וחיסכון.
-                `;
-                const result = await generateGeminiContent(prompt);
-                setAiSummary(result);
-                setIsAiLoading(false);
+                const savings = Math.floor(targetPop * ((baseCompliance + appBoost)/100) * 0.003 * 150000);
+
+                const getSummary = async () => {
+                    setLoading(true);
+                    const prompt = `נתונים: אוכלוסייה ${targetPop}, חיסכון ${savings}. כתוב משפט סיכום משכנע למנהל.`;
+                    const res = await generateGeminiContent(prompt);
+                    setAiSummary(res);
+                    setLoading(false);
+                };
+
+                return (
+                    <SlideContainer>
+                        <h2 className="text-4xl font-bold mb-6">מחשבון חיסכון FOB</h2>
+                        <div className="flex flex-col lg:flex-row gap-8">
+                            <div className="flex-1 bg-white p-6 rounded-2xl shadow border space-y-6">
+                                <div><label>אוכלוסייה: {targetPop}</label><input type="range" min="10000" max="200000" step="5000" value={targetPop} onChange={e=>setTargetPop(Number(e.target.value))} className="w-full"/></div>
+                                <div><label>היענות בסיס: {baseCompliance}%</label><input type="range" min="30" max="80" value={baseCompliance} onChange={e=>setBaseCompliance(Number(e.target.value))} className="w-full"/></div>
+                                <div><label>תוספת אפליקציה: +{appBoost}%</label><input type="range" min="5" max="30" value={appBoost} onChange={e=>setAppBoost(Number(e.target.value))} className="w-full accent-green-500"/></div>
+                            </div>
+                            <div className="flex-1 space-y-4">
+                                <div className="bg-white p-6 rounded-2xl border-t-4 border-green-500 text-center">
+                                    <div className="text-gray-500">חיסכון שנתי משוער</div>
+                                    <div className="text-5xl font-black text-green-600">₪{savings.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="font-bold text-indigo-700 flex items-center gap-2"><Sparkles size={16}/> AI Analysis</span>
+                                        <button onClick={getSummary} className="bg-indigo-600 text-white text-xs px-3 py-1 rounded-full">{loading ? '...' : 'נתח'}</button>
+                                    </div>
+                                    <p className="text-sm text-slate-700 min-h-[60px]">{aiSummary || 'לחץ לקבלת ניתוח'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </SlideContainer>
+                );
             };
 
-            return (
+            const CalprotectinSlide = () => (
                 <SlideContainer>
-                    <div className="flex flex-col h-full font-sans">
-                        <div className="mb-6">
-                            <h2 className="text-4xl font-bold text-slate-800">Calprotectin: מסננת חכמה</h2>
-                            <p className="text-xl text-slate-500">פתרון לעומס במכוני הגסטרו: הבדלה בין IBD ל-IBS</p>
+                    <h2 className="text-4xl font-bold mb-2">Calprotectin</h2>
+                    <p className="text-xl text-slate-500 mb-8">סינון חכם המבדיל בין IBD ל-IBS</p>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-xl shadow border-r-4 border-indigo-500">
+                            <h3 className="font-bold text-lg mb-2">המצב כיום</h3>
+                            <p>כל תלונה על כאב בטן נשלחת לקולונוסקופיה יקרה (2,500 ₪).</p>
                         </div>
-
-                        <div className="flex flex-col lg:flex-row gap-8 flex-1">
-                            <div className="flex-1 bg-white p-6 rounded-2xl shadow-lg border border-indigo-100 flex flex-col">
-                                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                    <Activity size={20} className="text-indigo-600"/> הפחתת תורים מיותרים
-                                </h3>
-                                <div className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            מטופלים עם תלונה על כאבי בטן (פוטנציאל שנתי)
-                                        </label>
-                                        <input 
-                                            type="range" min="1000" max="100000" step="1000" 
-                                            value={population} onChange={(e) => setPopulation(Number(e.target.value))}
-                                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 dir-ltr"
-                                        />
-                                        <div className="text-right font-bold text-indigo-600 text-lg mt-1">{population.toLocaleString()} מטופלים</div>
-                                    </div>
-                                    <div className="bg-indigo-50 p-4 rounded-xl space-y-2 text-sm text-slate-700 flex-1">
-                                        <p className="font-bold flex items-center gap-2"><Calculator size={16}/> הנחות יסוד למודל:</p>
-                                        <ul className="list-disc list-inside space-y-1">
-                                            <li>כ-5% מהמבוטחים פונים עם תלונות בטן.</li>
-                                            <li>ללא סינון: כולם נשלחים לקולונוסקופיה (2,500 ₪).</li>
-                                            <li>עם Calprotectin: כ-50% מאובחנים כ-IBS ונחסכים (עלות בדיקה 150 ₪).</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex-1 flex flex-col gap-4">
-                                <div className="grid grid-cols-1 gap-4">
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border-r-4 border-indigo-500 flex justify-between items-center">
-                                        <div>
-                                            <div className="text-sm text-slate-500">קולונוסקופיות שנחסכו</div>
-                                            <div className="text-3xl font-black text-slate-800">{savedColonoscopies.toLocaleString()}</div>
-                                        </div>
-                                        <Microscope size={40} className="text-indigo-200"/>
-                                    </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border-r-4 border-green-500 flex justify-between items-center">
-                                        <div>
-                                            <div className="text-sm text-slate-500">חיסכון כספי ישיר לקופה</div>
-                                            <div className="text-3xl font-black text-green-600">₪{moneySaved.toLocaleString()}</div>
-                                        </div>
-                                        <Activity size={40} className="text-green-200"/>
-                                    </div>
-                                </div>
-
-                                <div className="flex-1 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-5 flex flex-col">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <div className="flex items-center gap-2 text-indigo-700 font-bold">
-                                            <Sparkles size={18} />
-                                            <span>ניתוח תפעולי (AI)</span>
-                                        </div>
-                                        <button 
-                                            onClick={generateSummary}
-                                            disabled={isAiLoading}
-                                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-full shadow transition-all flex items-center gap-1 disabled:opacity-50"
-                                        >
-                                            {isAiLoading ? <Loader2 size={14} className="animate-spin" /> : <MessageSquareQuote size={14} />}
-                                            {isAiLoading ? 'מעבד...' : 'צור המלצה לדירקטוריון'}
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="flex-1 bg-white/60 rounded-xl p-3 text-sm text-slate-700 leading-relaxed overflow-y-auto">
-                                        {aiSummary ? (
-                                            <p className="animate-[fadeIn_0.5s_ease-out]">{aiSummary}</p>
-                                        ) : (
-                                            <p className="text-slate-400 italic text-center mt-2">לחץ כדי לקבל המלצה אסטרטגית מבוססת AI...</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="bg-white p-6 rounded-xl shadow border-r-4 border-green-500">
+                            <h3 className="font-bold text-lg mb-2">עם BMT</h3>
+                            <p>בדיקה ביתית פשוטה מסננת 50% מהמקרים (IBS) וחוסכת תורים.</p>
                         </div>
                     </div>
                 </SlideContainer>
             );
-        }
 
-        const ProductSuiteSlide = () => (
-            <SlideContainer>
-                <div className="mb-8 font-sans">
-                    <h2 className="text-4xl font-bold text-slate-800">פורטפוליו בדיקות מקיף</h2>
-                    <p className="text-xl text-slate-500 mt-2">מעטפת דיאגנוסטית שלמה לבית ולמרפאה</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full pb-8 font-sans">
-                    <div className="bg-white p-6 rounded-2xl shadow-md border-r-4 border-teal-500 hover:shadow-lg transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="bg-teal-100 p-3 rounded-xl text-teal-600"><FlaskConical size={32} /></div>
-                            <span className="bg-teal-50 text-teal-700 px-3 py-1 rounded-full text-xs font-bold">גסטרואנטרולוגיה</span>
+            const ProductSuiteSlide = () => (
+                <SlideContainer>
+                    <h2 className="text-4xl font-bold mb-8">פורטפוליו בדיקות</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-2xl shadow border-r-4 border-teal-500">
+                            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><FlaskConical/> גסטרו</h3>
+                            <ul className="space-y-2">
+                                <li>• <strong>H. Pylori:</strong> אנטיגן בצואה, מחליף נשיפה.</li>
+                                <li>• <strong>Calprotectin:</strong> סמן דלקת רגיש.</li>
+                            </ul>
                         </div>
-                        <h3 className="text-2xl font-bold text-slate-800 mb-2">מערך גסטרו מלא</h3>
-                        <ul className="space-y-3">
-                            <li className="flex items-start gap-3">
-                                <span className="w-2 h-2 mt-2 rounded-full bg-teal-500 flex-shrink-0"></span>
-                                <div>
-                                    <strong>H. Pylori Ag:</strong> זיהוי אנטיגן בצואה. מחליף את תבחין הנשיפה היקר והמסורבל. תשובה במקום.
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <span className="w-2 h-2 mt-2 rounded-full bg-teal-500 flex-shrink-0"></span>
-                                <div>
-                                    <strong>Calprotectin:</strong> סמן דלקת (Inflammation Marker) רגיש.
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <span className="w-2 h-2 mt-2 rounded-full bg-teal-500 flex-shrink-0"></span>
-                                <div>
-                                    <strong>Adeno/Rota:</strong> פאנל ילדים לזיהוי מהיר של גורמי שלשול ויראליים.
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-2xl shadow-md border-r-4 border-rose-500 hover:shadow-lg transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="bg-rose-100 p-3 rounded-xl text-rose-600"><Stethoscope size={32} /></div>
-                            <span className="bg-rose-50 text-rose-700 px-3 py-1 rounded-full text-xs font-bold">קהילה ומשפחה</span>
-                        </div>
-                        <h3 className="text-2xl font-bold text-slate-800 mb-2">רפואת משפחה וילדים</h3>
-                        <div className="grid grid-cols-2 gap-4 mt-4">
-                            <div className="bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
-                                <div className="font-bold text-slate-800 text-lg">Covid + Flu</div>
-                                <div className="text-xs text-slate-500">Combo A+B</div>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
-                                <div className="font-bold text-slate-800 text-lg">Strep A</div>
-                                <div className="text-xs text-slate-500">מניעת אנטיביוטיקה</div>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
-                                <div className="font-bold text-slate-800 text-lg">Pregnancy</div>
-                                <div className="text-xs text-slate-500">hCG רגיש במיוחד</div>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
-                                <div className="font-bold text-slate-800 text-lg">Giardia</div>
-                                <div className="text-xs text-slate-500">זיהוי טפילים</div>
-                            </div>
+                        <div className="bg-white p-6 rounded-2xl shadow border-r-4 border-rose-500">
+                            <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><Stethoscope/> משפחה</h3>
+                            <ul className="space-y-2">
+                                <li>• <strong>Covid + Flu:</strong> בדיקה משולבת.</li>
+                                <li>• <strong>Strep A:</strong> זיהוי דלקת גרון.</li>
+                            </ul>
                         </div>
                     </div>
-                </div>
-            </SlideContainer>
-        );
-
-        const SummarySlide = () => (
-            <SlideContainer className="justify-center items-center">
-                <div className="w-full max-w-5xl bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl p-12 text-white font-sans text-center">
-                    <div className="mb-8 flex justify-center">
-                        <div className="bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-500/30">
-                            <Activity size={48} className="text-white" />
-                        </div>
-                    </div>
-                    
-                    <h2 className="text-4xl md:text-5xl font-black mb-6">העתיד של הדיאגנוסטיקה כבר כאן</h2>
-                    <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed">
-                        השילוב בין בדיקות מעבדה מדויקות לטכנולוגיית AI ביתית מאפשר לקופות החולים
-                        לשפר דרמטית את איכות הרפואה, להגדיל את היענות המטופלים ולחסוך מיליוני שקלים בשנה.
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-right">
-                        <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
-                            <h4 className="text-xl font-bold text-blue-400 mb-2">קליני</h4>
-                            <p className="text-sm text-slate-300">דיוק מעבדתי בבית המטופל, הפחתת טעויות אנוש ופענוח מיידי.</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
-                            <h4 className="text-xl font-bold text-green-400 mb-2">כלכלי</h4>
-                            <p className="text-sm text-slate-300">חיסכון עצום בעלויות טיפול אונקולוגי ובדיקות פולשניות מיותרות.</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
-                            <h4 className="text-xl font-bold text-purple-400 mb-2">שירותי</h4>
-                            <p className="text-sm text-slate-300">זמינות מקסימלית למבוטח, הפחתת תורים ושיפור שביעות רצון.</p>
-                        </div>
-                    </div>
-                </div>
-            </SlideContainer>
-        );
-
-        // --- MAIN APP COMPONENT ---
-
-        const App = () => {
-            const [currentSlide, setCurrentSlide] = useState(0);
-            const slides = [
-                CoverSlide,
-                StrategySlide,
-                DigitalSolutionSlide,
-                FOBEconomicsSlide,
-                CalprotectinSlide,
-                ProductSuiteSlide,
-                SummarySlide
-            ];
-
-            const nextSlide = () => {
-                if (currentSlide < slides.length - 1) setCurrentSlide(curr => curr + 1);
-            };
-
-            const prevSlide = () => {
-                if (currentSlide > 0) setCurrentSlide(curr => curr - 1);
-            };
-
-            const CurrentSlideComponent = slides[currentSlide];
-
-            // Hide loading screen once App mounts
-            useEffect(() => {
-                const loader = document.getElementById('loading-screen');
-                if (loader) loader.style.display = 'none';
-            }, []);
-
-            return (
-                <div className="w-full h-screen bg-slate-50 flex flex-col text-right font-sans" dir="rtl">
-                    <Header currentSlide={currentSlide} totalSlides={slides.length} />
-                    
-                    <main className="flex-1 relative overflow-hidden">
-                        <div key={currentSlide} className="w-full h-full animate-[fadeIn_0.5s_ease-out]">
-                            <CurrentSlideComponent nextSlide={nextSlide} />
-                        </div>
-                    </main>
-
-                    <AIAssistant />
-
-                    <div className="fixed bottom-0 left-0 right-0 h-20 bg-white border-t border-gray-200 flex items-center justify-between px-8 z-50">
-                        <button 
-                            onClick={prevSlide} 
-                            disabled={currentSlide === 0}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-full font-medium transition-all ${currentSlide === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
-                        >
-                            <ChevronRight size={20} /> הקודם
-                        </button>
-
-                        <div className="hidden md:block text-slate-400 text-sm">
-                            © 2024 BMT Diagnostics. Confidential.
-                        </div>
-
-                        <button 
-                            onClick={nextSlide} 
-                            disabled={currentSlide === slides.length - 1}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-full font-medium transition-all ${currentSlide === slides.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'}`}
-                        >
-                            {currentSlide === slides.length - 1 ? 'סיום' : 'הבא'} <ChevronLeft size={20} />
-                        </button>
-                    </div>
-                </div>
+                </SlideContainer>
             );
-        };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+            const SummarySlide = () => (
+                <SlideContainer className="justify-center items-center text-center">
+                    <div className="w-full max-w-4xl bg-slate-900 text-white p-12 rounded-3xl shadow-2xl">
+                        <Activity size={48} className="mx-auto mb-6 text-blue-400"/>
+                        <h2 className="text-4xl font-bold mb-6">העתיד כבר כאן</h2>
+                        <p className="text-xl text-slate-300 mb-8">דיוק קליני, חיסכון כלכלי ושירות טוב יותר למבוטח.</p>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                            <div className="bg-white/10 p-4 rounded-xl"><h3>קליני</h3><span className="text-sm text-gray-400">דיוק ומניעת טעויות</span></div>
+                            <div className="bg-white/10 p-4 rounded-xl"><h3>כלכלי</h3><span className="text-sm text-gray-400">חיסכון בטיפולים</span></div>
+                            <div className="bg-white/10 p-4 rounded-xl"><h3>שירות</h3><span className="text-sm text-gray-400">זמינות ונוחות</span></div>
+                        </div>
+                    </div>
+                </SlideContainer>
+            );
+
+            // --- App Main ---
+
+            const App = () => {
+                const [slide, setSlide] = useState(0);
+                const slides = [CoverSlide, StrategySlide, DigitalSolutionSlide, FOBEconomicsSlide, CalprotectinSlide, ProductSuiteSlide, SummarySlide];
+                const Component = slides[slide];
+
+                return (
+                    <div className="w-full h-screen bg-slate-50 flex flex-col font-sans" dir="rtl">
+                        <Header currentSlide={slide} totalSlides={slides.length} />
+                        <div className="flex-1 relative overflow-hidden animate-[fadeIn_0.5s]">
+                            <Component nextSlide={() => setSlide(s => Math.min(s+1, slides.length-1))} />
+                        </div>
+                        <AIAssistant />
+                        <div className="h-20 bg-white border-t flex items-center justify-between px-8">
+                            <button onClick={()=>setSlide(s=>Math.max(0, s-1))} disabled={slide===0} className="px-6 py-2 rounded-full hover:bg-slate-100 disabled:opacity-50"><ChevronRight/> הקודם</button>
+                            <button onClick={()=>setSlide(s=>Math.min(slides.length-1, s+1))} disabled={slide===slides.length-1} className="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 flex gap-2">{slide===slides.length-1?'סיום':'הבא'} <ChevronLeft/></button>
+                        </div>
+                    </div>
+                );
+            };
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<App />);
+        });
     </script>
 </body>
 </html>
