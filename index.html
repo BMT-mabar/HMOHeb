@@ -2,8 +2,8 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMT Diagnostics - Final Deck</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BMT Diagnostics - Partner Deck</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -21,19 +21,20 @@
             height: 100vh; width: 100vw; 
             display: flex; align-items: center; justify-content: center;
             font-family: 'Heebo', sans-serif;
+            touch-action: none; /* Prevent scroll bounce on mobile */
         }
         
         #cinema-container {
             width: 1920px; height: 1080px;
             background-color: #f8fafc; position: relative; overflow: hidden;
             box-shadow: 0 0 100px rgba(0,0,0,0.5);
+            /* Transform handles by JS */
         }
 
         .animate-enter { animation: enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(40px); }
         .delay-100 { animation-delay: 0.1s; }
         .delay-200 { animation-delay: 0.2s; }
         .delay-300 { animation-delay: 0.3s; }
-        
         @keyframes enter { to { opacity: 1; transform: translateY(0); } }
 
         /* Custom Scrollbar */
@@ -43,15 +44,7 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         /* Glassmorphism */
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.6); }
-        .glass-dark { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); color: white; }
-
-        /* Background Decor */
-        .blob { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.5; }
-        .blob-1 { width: 700px; height: 700px; top: -200px; right: -200px; background: #3b82f6; animation: float 10s infinite alternate; }
-        .blob-2 { width: 600px; height: 600px; bottom: -100px; left: -100px; background: #14b8a6; animation: float 12s infinite alternate-reverse; }
-
-        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, 40px); } }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
     </style>
 </head>
 <body>
@@ -61,7 +54,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- 1. ICONS (Embedded SVG) ---
+        // --- 1. ICONS (SVG Injection - No Library Dependency) ---
         const SVGS = {
             ArrowLeft: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,
             ChevronRight: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
@@ -139,6 +132,24 @@
             );
         };
 
+        // Funnel Chart (CSS Implementation)
+        const FunnelChart = () => (
+            <div className="w-full flex flex-col items-center gap-4">
+                <div className="w-full bg-slate-300 h-24 relative flex items-center justify-center text-white font-bold text-2xl rounded-t-2xl shadow-sm" style={{clipPath: 'polygon(0 0, 100% 0, 95% 100%, 5% 100%)'}}>
+                    קיבלו ערכה (100%)
+                </div>
+                <div className="w-[90%] bg-blue-400 h-24 relative flex items-center justify-center text-white font-bold text-2xl shadow-sm" style={{clipPath: 'polygon(0 0, 100% 0, 90% 100%, 10% 100%)'}}>
+                    ביצעו איסוף (80%)
+                </div>
+                <div className="w-[80%] bg-red-500 h-24 relative flex items-center justify-center text-white font-bold text-2xl rounded-b-2xl shadow-sm" style={{clipPath: 'polygon(0 0, 100% 0, 85% 100%, 15% 100%)'}}>
+                    החזירו למעבדה (60%)
+                </div>
+                <div className="mt-6 bg-red-50 text-red-700 px-6 py-3 rounded-2xl font-bold border border-red-200 text-lg flex items-center gap-2">
+                    <Icon name="TrendingUp" size={24}/> 40% נטישה בתהליך הלוגיסטי
+                </div>
+            </div>
+        );
+
         // --- 3. SLIDES ---
 
         const CoverSlide = ({ next }) => (
@@ -186,67 +197,27 @@
             </div>
         );
 
-        // COMPARISON SLIDE
-        const ComparisonSlide = () => (
-            <div className="flex flex-col h-full px-12 pt-8 relative z-10">
-                <div className="text-center mb-10 animate-enter">
-                    <h2 className="text-6xl font-black text-slate-800">המהפכה בתהליך הבדיקה</h2>
-                    <p className="text-3xl text-slate-500 mt-2">קיצור דרמטי של המסע למטופל ולמערכת</p>
+        const FunnelSlide = () => (
+             <div className="flex gap-20 h-full items-center px-12 animate-enter relative z-10">
+                <div className="w-1/2 space-y-10">
+                     <h2 className="text-6xl font-black text-slate-800 border-r-8 border-red-500 pr-10">צוואר הבקבוק</h2>
+                     <p className="text-3xl text-slate-500 leading-relaxed">
+                        תהליך הבדיקה הנוכחי דורש מהמטופל מאמץ לוגיסטי (איסוף, שמירה, החזרה למרפאה), מה שמוביל לנטישה גבוהה באמצע התהליך.
+                     </p>
+                     <div className="bg-slate-100 p-8 rounded-3xl border border-slate-200">
+                        <h3 className="text-2xl font-bold text-slate-700 mb-2">נקודת הכשל העיקרית</h3>
+                        <p className="text-xl text-slate-600">רוב הנטישה מתרחשת בין רגע קבלת הערכה לבין החזרתה הפיזית למעבדה.</p>
+                     </div>
                 </div>
-                <div className="flex gap-16 flex-1 animate-enter delay-100 pb-8">
-                    {/* Old Way */}
-                    <div className="flex-1 bg-slate-100 rounded-[2.5rem] p-10 border-2 border-slate-200 opacity-80 flex flex-col relative grayscale-[0.5]">
-                         <div className="absolute top-0 right-0 bg-slate-300 text-slate-600 font-bold px-6 py-2 rounded-bl-2xl rounded-tr-2xl text-xl">המצב כיום</div>
-                         <h3 className="text-4xl font-bold text-slate-600 mb-10 text-center mt-4">תהליך ידני ומסורבל</h3>
-                         <div className="flex-1 flex flex-col justify-between relative">
-                             <div className="absolute left-[30px] top-4 bottom-4 w-1 bg-slate-300 z-0"></div>
-                             {[
-                                 {i:'FileText', t:'הפניה מרופא', c:'slate'},
-                                 {i:'Car', t:'נסיעה למרפאה לאיסוף', c:'slate'},
-                                 {i:'Clock', t:'ביצוע בבית ושמירה', c:'slate'},
-                                 {i:'Car', t:'נסיעה למרפאה להחזרה', c:'slate'},
-                                 {i:'Clock', t:'המתנה ארוכה לתוצאות', c:'slate'}
-                             ].map((s, idx) => (
-                                 <div key={idx} className="flex items-center gap-6 relative z-10">
-                                     <div className="bg-white p-4 rounded-full border-2 border-slate-300 text-slate-500 shadow-sm"><Icon name={s.i} size={32}/></div>
-                                     <div className="text-2xl text-slate-600 font-medium">{s.t}</div>
-                                 </div>
-                             ))}
-                         </div>
-                    </div>
-
-                    {/* VS Badge */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 bg-white p-6 rounded-full shadow-2xl font-black text-3xl text-slate-200 border-8 border-slate-50">VS</div>
-
-                    {/* New Way */}
-                    <div className="flex-1 bg-white rounded-[2.5rem] p-10 border-4 border-blue-500 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 bg-blue-600 text-white font-bold px-8 py-3 rounded-bl-2xl text-xl">הפתרון של BMT</div>
-                        <h3 className="text-4xl font-bold text-blue-600 mb-10 text-center mt-4">דיגיטלי, מהיר וביתי</h3>
-                         <div className="flex-1 flex flex-col justify-between relative h-full">
-                             <div className="absolute left-[30px] top-4 bottom-4 w-1 bg-blue-100 z-0"></div>
-                             {[
-                                 {i:'Smartphone', t:'הפניה דיגיטלית אישית', c:'blue'},
-                                 {i:'Mail', t:'הערכה נשלחת הביתה', c:'indigo'},
-                                 {i:'Scan', t:'ביצוע וסריקה באפליקציה', c:'blue'},
-                                 {i:'Zap', t:'קריאה ודיווח מבוקר', c:'yellow'},
-                                 {i:'CheckCircle2', t:'עדכון אוטומטי בתיק', c:'green'}
-                             ].map((s, idx) => (
-                                 <div key={idx} className="flex items-center gap-6 relative z-10">
-                                     <div className={`bg-${s.c}-100 p-4 rounded-full text-${s.c}-600 shadow-md ring-4 ring-white`}><Icon name={s.i} size={32}/></div>
-                                     <div className="text-2xl text-slate-800 font-bold">{s.t}</div>
-                                 </div>
-                             ))}
-                         </div>
-                         <div className="absolute bottom-6 left-6 text-green-600 font-bold bg-green-50 px-4 py-2 rounded-xl flex items-center gap-2">
-                             <Icon name="CheckCircle2"/> 0% נטישה לוגיסטית
-                         </div>
-                    </div>
+                <div className="w-1/2 glass bg-white p-16 rounded-[3rem] shadow-2xl border border-slate-100 flex flex-col items-center justify-center h-[700px]">
+                     <h4 className="text-3xl font-bold text-slate-700 mb-12">משפך ההיענות (נטישה)</h4>
+                     <FunnelChart />
                 </div>
-            </div>
+             </div>
         );
 
         const SolutionSlide = () => (
-            <div className="h-full flex flex-col px-12 pt-8 animate-enter">
+            <div className="h-full flex flex-col px-12 pt-8 animate-enter relative z-10">
                 <div className="text-center mb-16">
                     <h2 className="text-6xl font-black text-slate-800 mb-4">הפתרון: מעבדה דיגיטלית בבית</h2>
                     <p className="text-3xl text-slate-500">הנגשת בדיקות המעבדה למטופל באמצעות הסמארטפון</p>
@@ -254,7 +225,7 @@
                 <div className="grid grid-cols-3 gap-12 flex-1">
                     {[
                         {icon:'Smartphone', color:'blue', title:'1. ביצוע בבית', desc:'המטופל מבצע את הבדיקה בנוחות ובפרטיות ביתו. ללא צורך בלוגיסטיקה מורכבת.'},
-                        {icon:'ShieldCheck', color:'indigo', title:'2. ניתוח מבוקר', desc:'מנגנון AI המלווה את המטופל ומוודא בזמן אמת שהדגימה תקינה והדיווח מדויק.'},
+                        {icon:'ShieldCheck', color:'indigo', title:'2. בקרת איכות (AI)', desc:'מנגנון AI המלווה את המטופל ומוודא בזמן אמת שהדגימה תקינה והפענוח מדויק.'},
                         {icon:'CheckCircle2', color:'green', title:'3. דיווח אוטומטי', desc:'התוצאה מתקבלת מיידית ומועברת בצורה מאובטחת למערכות הקופה.'}
                     ].map((item, i) => (
                         <div key={i} className="glass bg-white p-12 rounded-[3rem] text-center flex flex-col items-center hover:-translate-y-4 transition-transform duration-300 border-t-8" style={{borderColor: item.color === 'blue' ? '#3b82f6' : item.color === 'indigo' ? '#6366f1' : '#22c55e'}}>
@@ -268,7 +239,7 @@
         );
 
         const IntegrationSlide = () => (
-            <div className="flex gap-16 h-full px-12 pt-8 animate-enter items-center">
+            <div className="flex gap-16 h-full px-12 pt-8 animate-enter items-center relative z-10">
                 <div className="w-1/2 space-y-12">
                     <div>
                         <h2 className="text-6xl font-black text-slate-800 border-r-8 border-blue-500 pr-8">אינטגרציה ופרטיות</h2>
@@ -303,7 +274,7 @@
                                 <div className="bg-white border-2 border-blue-500 p-8 rounded-3xl shadow-lg flex items-center justify-between cursor-pointer transform hover:scale-105 transition-transform bg-blue-50/50">
                                     <div className="flex items-center gap-6">
                                         <div className="bg-blue-600 text-white p-4 rounded-2xl shadow-lg"><Icon name="Scan" size={32}/></div>
-                                        <div><div className="font-bold text-slate-800 text-xl">בדיקת FOB</div><div className="text-slate-500">בדיקה ודיווח</div></div>
+                                        <div><div className="font-bold text-slate-800 text-xl">בדיקת FOB</div><div className="text-slate-500">פענוח מהיר</div></div>
                                     </div>
                                     <Icon name="ArrowLeft" className="text-blue-500"/>
                                 </div>
@@ -315,14 +286,14 @@
         );
 
         const ValidationSlide = () => (
-             <div className="flex flex-col h-full px-12 pt-8 animate-enter">
+             <div className="flex flex-col h-full px-12 pt-8 animate-enter relative z-10">
                 <div className="mb-10">
                     <h2 className="text-5xl font-black text-slate-800 border-r-8 border-green-500 pr-6">תיקוף קליני וניסיון משתמש</h2>
                     <p className="text-2xl text-slate-500 mt-2">נתונים מניסויים ומחקרי שמישות בבית חולים מוביל</p>
                 </div>
                 <div className="grid grid-cols-2 gap-16 flex-1">
                     <div className="bg-white rounded-[3rem] shadow-xl border border-slate-200 p-12 flex flex-col justify-center space-y-10">
-                         <div className="flex items-center gap-6"><div className="bg-blue-100 p-4 rounded-2xl"><Icon name="FileText" size={40} className="text-blue-600"/></div><h3 className="text-3xl font-bold text-slate-800">דיוק הערכה (ביחס לבדיקת מעבדה)</h3></div>
+                         <div className="flex items-center gap-6"><div className="bg-blue-100 p-4 rounded-2xl"><Icon name="FileText" size={40} className="text-blue-600"/></div><h3 className="text-3xl font-bold text-slate-800">דיוק פענוח AI</h3></div>
                          <div className="space-y-8">
                             <div className="flex justify-between items-end border-b pb-4"><span className="text-2xl text-slate-600">התאמה למעבדה</span><span className="text-5xl font-black text-blue-600">98.6%</span></div>
                             <div className="flex justify-between items-end border-b pb-4"><span className="text-2xl text-slate-600">רגישות (Sensitivity)</span><span className="text-5xl font-black text-blue-600">95%</span></div>
@@ -344,55 +315,12 @@
              </div>
         );
 
-        const FOBEconomicsSlide = () => {
-            const [pop, setPop] = useState(50000);
-            const [comp, setComp] = useState(60);
-            const [boost, setBoost] = useState(15);
-            
-            const current = Math.floor(pop * (comp/100));
-            const extra = Math.floor(pop * ((comp+boost)/100)) - current;
-            const detected = Math.floor(extra * 0.003);
-            const saved = detected * 150000;
-
-            return (
-                <div className="h-full flex flex-col px-16 pt-10 relative z-10">
-                    <div className="mb-10 animate-enter">
-                        <h2 className="text-5xl font-black text-slate-800">מחשבון חיסכון FOB</h2>
-                        <p className="text-2xl text-slate-500 mt-2">סימולציה חיה: השפעת האפליקציה על גילוי מוקדם</p>
-                    </div>
-                    <div className="flex gap-16 flex-1 animate-enter delay-100 pb-10">
-                        <div className="w-1/2 glass bg-white/80 p-12 rounded-[3rem] flex flex-col justify-center space-y-12 shadow-xl">
-                            <h3 className="text-3xl font-bold text-slate-700 flex items-center gap-4 border-b pb-6"><Icon name="Sliders" size={32}/> פרמטרים</h3>
-                            <div><label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">אוכלוסיית יעד <span className="text-blue-600 bg-blue-50 px-4 py-1 rounded-xl">{pop.toLocaleString()}</span></label><input type="range" min="10000" max="200000" step="5000" value={pop} onChange={e=>setPop(+e.target.value)} className="w-full"/></div>
-                            <div><label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">היענות נוכחית <span className="text-slate-500 bg-slate-100 px-4 py-1 rounded-xl">{comp}%</span></label><input type="range" min="30" max="80" value={comp} onChange={e=>setComp(+e.target.value)} className="w-full"/></div>
-                            <div className="bg-green-50 p-8 rounded-3xl border-2 border-green-100"><label className="flex justify-between text-2xl font-bold text-green-800 mb-4">תוספת היענות (BMT) <span className="text-green-700 bg-white px-4 py-1 rounded-xl shadow-sm">+{boost}%</span></label><input type="range" min="5" max="30" value={boost} onChange={e=>setBoost(+e.target.value)} className="w-full accent-green-600"/></div>
-                        </div>
-                        <div className="w-1/2 flex flex-col gap-8">
-                            <div className="glass-dark p-12 rounded-[3rem] shadow-2xl flex-1 flex flex-col justify-center text-center">
-                                <div className="space-y-10">
-                                    <div><div className="text-slate-400 mb-2 uppercase tracking-widest font-bold">בדיקות סקר נוספות</div><div className="text-7xl font-black text-blue-400">+{extra.toLocaleString()}</div></div>
-                                    <div><div className="text-slate-400 mb-2 uppercase tracking-widest font-bold">גילוי מוקדם (מקרים)</div><div className="text-7xl font-black text-green-400">~{detected}</div></div>
-                                </div>
-                            </div>
-                            <div className="glass bg-white p-12 rounded-[3rem] shadow-xl border-t-8 border-green-500 text-center flex-1 flex flex-col justify-center items-center">
-                                <div className="text-2xl text-slate-500 font-bold mb-4 uppercase tracking-widest">חיסכון כלכלי משוער</div>
-                                <div className="text-8xl font-black text-green-600 tracking-tighter">₪{saved.toLocaleString()}</div>
-                                <div className="mt-6 bg-green-50 text-green-800 text-sm px-4 py-2 rounded-full font-medium border border-green-100">
-                                    חיסכון של 150k ש"ח לכל מקרה של גילוי מוקדם
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
         const CTASlide = () => (
-            <div className="flex flex-col items-center justify-center h-full text-center px-12 animate-enter">
+            <div className="flex flex-col items-center justify-center h-full text-center px-12 animate-enter relative z-10">
                 <div className="bg-white p-16 rounded-[4rem] shadow-2xl border-t-8 border-blue-600 max-w-7xl w-full relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-bl-full"></div>
-                    <h2 className="text-6xl font-black text-slate-900 mb-10 relative z-10">בואו נדבר על המספרים האמיתיים</h2>
-                    <p className="text-3xl text-slate-600 mb-16 font-light leading-relaxed relative z-10">יש לנו מודלים כלכליים מפורטים ותוצאות מלאות של הניסויים הקליניים.<br/><strong className="text-slate-800">פגישה קצרה יכולה לשנות את מדדי האיכות של הקופה לשנה הקרובה.</strong></p>
+                    <h2 className="text-6xl font-black text-slate-900 mb-10 relative z-10">בואו נדבר על המספרים</h2>
+                    <p className="text-3xl text-slate-600 mb-16 font-light leading-relaxed relative z-10">יש לנו מודלים כלכליים ותוצאות ניסויים מלאות.<br/><strong className="text-slate-800">פגישה קצרה יכולה לשנות את מדדי האיכות של הקופה לשנה הקרובה.</strong></p>
                     
                     <div className="grid grid-cols-3 gap-8 relative z-10">
                         <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 flex flex-col items-center gap-4 hover:shadow-lg transition-shadow">
@@ -417,20 +345,6 @@
         const App = () => {
             const [slide, setSlide] = useState(0);
             
-            // Define slides array here so length is known
-            const slidesComponents = [
-                CoverSlide, 
-                TheProblemSlide, 
-                ComparisonSlide, // Replaces Funnel
-                SolutionSlide, 
-                IntegrationSlide, 
-                ValidationSlide, 
-                FOBEconomicsSlide, 
-                CTASlide
-            ];
-            
-            const total = slidesComponents.length;
-            
             // Auto-Scale Logic (Cinema Mode)
             const [scale, setScale] = useState(1);
             useEffect(() => {
@@ -443,37 +357,46 @@
                 return () => window.removeEventListener('resize', resize);
             }, []);
 
+            const slides = [
+                CoverSlide,
+                TheProblemSlide,
+                FunnelSlide,
+                SolutionSlide,
+                IntegrationSlide,
+                ValidationSlide,
+                CTASlide
+            ];
+            const total = slides.length;
+
             return (
                 <div id="cinema-container" style={{ transform: `scale(${scale})` }}>
-                    <div className="absolute inset-0 z-0">
-                        <div className="blob blob-1"></div>
-                        <div className="blob blob-2"></div>
-                    </div>
-
                     <div className="h-full flex flex-col relative z-10">
+                        {/* Header */}
                         <div className="h-28 flex items-center justify-between px-16 bg-white/80 backdrop-blur-md border-b border-white/50">
-                            <Logo />
-                            <div className="flex items-center gap-6">
-                                <div className="flex gap-2 bg-slate-200/50 p-2 rounded-full">
-                                    {Array.from({length:total}).map((_,i)=><div key={i} className={`h-3 rounded-full transition-all duration-500 ${i===slide?'w-12 bg-blue-600':'w-3 bg-slate-300'}`}/>)}
-                                </div>
-                                <span className="text-xl font-bold text-slate-500 w-20 text-center">{slide+1} / {total}</span>
+                             <div className="flex items-center gap-4">
+                                <img src="B.M.T Logo.jpg" alt="BMT" className="h-20 object-contain" onError={(e)=>{e.target.style.display='none'; e.target.nextSibling.style.display='block'}}/>
+                                <div className="hidden text-4xl font-black text-slate-800 tracking-tighter">BM<span className="text-red-600">T</span></div>
                             </div>
+                            <div className="flex items-center gap-6"><div className="flex gap-2 bg-slate-200/50 p-2 rounded-full">{Array.from({length:total}).map((_,i)=><div key={i} className={`h-3 rounded-full transition-all duration-500 ${i===slide?'w-12 bg-blue-600':'w-3 bg-slate-300'}`}/>)}</div><span className="text-xl font-bold text-slate-500 w-20 text-center">{slide+1} / {total}</span></div>
                         </div>
 
+                        {/* Content */}
                         <div className="flex-1 overflow-hidden relative">
-                            {/* Render current slide */}
-                            {React.createElement(slidesComponents[slide], { 
+                            {React.createElement(slides[slide], { 
                                 next: () => setSlide(Math.min(total-1, slide+1)) 
                             })}
                         </div>
 
+                        {/* Footer */}
                         <div className="h-28 flex items-center justify-between px-16 bg-white/80 border-t border-white/50">
                             <button onClick={()=>setSlide(Math.max(0, slide-1))} disabled={slide===0} className={`flex items-center gap-3 px-8 py-4 rounded-full font-bold text-xl transition-all ${slide===0?'opacity-0':'bg-white shadow-lg text-slate-700 hover:scale-105'}`}><Icon name="ChevronRight" size={28}/> הקודם</button>
                             <div className="text-slate-400 text-lg font-medium tracking-widest uppercase">BMT Diagnostics Confidential © 2025</div>
                             <button onClick={()=>setSlide(Math.min(total-1, slide+1))} disabled={slide===total-1} className={`flex items-center gap-3 px-12 py-4 rounded-full font-bold text-xl transition-all ${slide===total-1?'opacity-0':'bg-slate-900 shadow-2xl text-white hover:bg-blue-600 hover:scale-105'}`}>{slide===total-1?'':'הבא'} <Icon name="ChevronLeft" size={28}/></button>
                         </div>
                     </div>
+                    {/* Background Blobs */}
+                    <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-300 rounded-full mix-blend-multiply filter blur-[150px] opacity-10 animate-blob"></div>
+                    <div className="absolute bottom-0 left-0 w-[800px] h-[800px] bg-teal-300 rounded-full mix-blend-multiply filter blur-[150px] opacity-10 animate-blob animation-delay-2000"></div>
                 </div>
             );
         };
