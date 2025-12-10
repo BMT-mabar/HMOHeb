@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMT Diagnostics - Final Premium Deck</title>
+    <title>BMT Diagnostics - Final Deck</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -14,11 +14,9 @@
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
         body { 
-            background-color: #0f172a; /* Dark background outside slide */
+            background-color: #0f172a; 
             margin: 0; 
             padding: 0; 
             overflow: hidden; 
@@ -30,16 +28,21 @@
             font-family: 'Heebo', sans-serif;
         }
 
-        /* Cinema Canvas - Fixed Resolution that scales */
+        /* Cinema Canvas */
         #cinema-container {
-            width: 1920px;
-            height: 1080px;
+            width: 1600px;
+            height: 900px;
             background-color: #f8fafc;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            /* Transform will be handled by JS */
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
         }
+
+        /* Custom Scrollbar */
+        .custom-scroll { overflow-y: auto; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         /* Animations */
         .animate-enter { animation: enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(40px); }
@@ -50,31 +53,20 @@
         @keyframes enter { to { opacity: 1; transform: translateY(0); } }
 
         /* Glassmorphism */
-        .glass {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-        }
-        
-        .glass-dark {
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-        }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        .glass-dark { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); color: white; }
 
         /* Background Decor */
-        .blob { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.5; }
-        .blob-1 { width: 700px; height: 700px; top: -200px; right: -200px; background: #3b82f6; animation: float 10s infinite alternate; }
-        .blob-2 { width: 600px; height: 600px; bottom: -100px; left: -100px; background: #14b8a6; animation: float 12s infinite alternate-reverse; }
-
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.4; }
+        .blob-1 { width: 600px; height: 600px; top: -100px; right: -100px; background: #3b82f6; animation: float 10s infinite alternate; }
+        .blob-2 { width: 500px; height: 500px; bottom: -50px; left: -50px; background: #14b8a6; animation: float 12s infinite alternate-reverse; }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, 40px); } }
 
-        /* Custom Slider */
+        /* Range Slider */
         input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%; background: #2563eb; margin-top: -10px; box-shadow: 0 4px 10px rgba(37,99,235,0.4); border: 4px solid white; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #2563eb; margin-top: -10px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 2px solid white; transition: transform 0.1s; }
         input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #cbd5e1; border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -82,31 +74,55 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // --- 1. SETUP ---
         const { useState, useEffect, useRef } = React;
 
-        // --- 2. BASE COMPONENTS (DEFINED FIRST TO AVOID ERRORS) ---
+        // ==========================================
+        // 1. HELPERS & ICONS (Defined First!)
+        // ==========================================
 
-        // Icon Component using Lucide
-        const Icon = ({ name, size = 24, className = "" }) => {
-            const ref = useRef(null);
-            useEffect(() => {
-                if (window.lucide && ref.current) {
-                    const iconName = name.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '');
-                    ref.current.setAttribute('data-lucide', iconName);
-                    window.lucide.createIcons({ root: ref.current.parentNode });
-                }
-            }, [name]);
-            return <i ref={ref} className={className} style={{ width: size, height: size, display: 'inline-block' }}></i>;
+        // Internal SVG Icons (No external library dependency = No crash)
+        const Icons = {
+            ArrowLeft: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,
+            ArrowRight: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>,
+            ChevronRight: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+            ChevronLeft: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
+            Sparkles: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
+            TrendingUp: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+            Activity: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+            Smartphone: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
+            AlertTriangle: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>,
+            Scan: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>,
+            BrainCircuit: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M9 13a4.5 4.5 0 0 0 3-4"/><path d="M6.003 5.125A3 3 0 0 1 19.5 8"/><path d="M12 18a4 4 0 0 0 4-4 4.5 4.5 0 0 0-3-4"/><path d="M15.3 12.7a4 4 0 0 0 5.6 1.4"/><path d="M13.5 15.5a4.5 4.5 0 0 0 .8 4.2"/></svg>,
+            Database: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
+            Check: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+            Shield: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+            Sliders: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg>,
+            AlertCircle: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
+            Microscope: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg>,
+            Banknote: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>,
+            FlaskConical: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>,
+            Stethoscope: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
         };
 
-        // Logo with Fallback
+        const Icon = ({ name, size = 24, className }) => {
+            const svg = Icons[name] || Icons.Activity;
+            return <span className={className} style={{display:'inline-block', width:size, height:size}} dangerouslySetInnerHTML={{ __html: svg.props.children ? ReactDOMServer.renderToStaticMarkup(svg) : '' }}>{/* Hack for simple svg render */}</span>;
+        };
+        
+        // Simpler Icon Render for this environment
+        const SimpleIcon = ({ name, size=24, className="" }) => {
+            const Svg = Icons[name] || Icons.Activity;
+            return React.cloneElement(Svg, { width: size, height: size, className });
+        };
+
+        // --- 2. UNIVERSAL COMPONENTS (Header, Logo, Charts) ---
+
         const Logo = () => (
-            <div className="flex items-center gap-4 z-50">
+            <div className="flex items-center gap-3 z-50">
                 <img 
                     src="B.M.T Logo.jpg" 
                     alt="BMT" 
-                    className="h-20 w-auto object-contain drop-shadow-sm"
+                    className="h-20 w-auto object-contain drop-shadow-md"
                     onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
                 />
                 <div className="hidden flex-col leading-none" style={{display:'none'}}>
@@ -116,126 +132,126 @@
             </div>
         );
 
-        // Custom CSS Chart (Crash-proof)
-        const ProChart = ({ data, unit = "₪" }) => {
+        const Header = ({ currentSlide, totalSlides }) => (
+            <div className="h-24 flex items-center justify-between px-12 bg-white/80 backdrop-blur-md border-b border-white/50 relative z-50">
+                <Logo />
+                <div className="flex items-center gap-6">
+                    <div className="hidden md:flex gap-2">
+                        {Array.from({ length: totalSlides }).map((_, i) => (
+                            <div key={i} className={`h-2 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-8 bg-gradient-to-r from-blue-600 to-cyan-400' : 'w-2 bg-slate-300'}`} />
+                        ))}
+                    </div>
+                    <span className="text-sm font-bold text-slate-400 bg-slate-100 px-4 py-1.5 rounded-full shadow-inner">
+                        {currentSlide + 1} / {totalSlides}
+                    </span>
+                </div>
+            </div>
+        );
+
+        // Crash-proof CSS Chart
+        const CssBarChart = ({ data }) => {
             const max = Math.max(...data.map(d => d.val));
             return (
-                <div className="w-full h-80 flex items-end justify-around gap-8 px-8 relative">
-                    {/* Grid Lines */}
-                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 opacity-20">
-                        {[1,2,3,4,5].map(i => <div key={i} className="w-full h-px bg-slate-400 border-t border-dashed"></div>)}
+                <div className="w-full h-64 flex items-end justify-around gap-8 px-4 relative pt-12">
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 opacity-20 z-0">
+                        <div className="w-full h-px bg-slate-400 border-t border-dashed"></div>
+                        <div className="w-full h-px bg-slate-400 border-t border-dashed"></div>
+                        <div className="w-full h-px bg-slate-400 border-t border-dashed"></div>
+                        <div className="w-full h-px bg-slate-400 border-t border-dashed"></div>
                     </div>
-                    
                     {data.map((d, i) => (
                         <div key={i} className="flex-1 h-full flex flex-col justify-end items-center group relative z-10">
-                            {/* Floating Value Bubble */}
-                            <div className="mb-4 bg-slate-800 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0 duration-300">
-                                {unit}{d.val.toLocaleString()}
+                            <div className="mb-2 bg-slate-800 text-white px-3 py-1 rounded-lg font-bold text-sm shadow-xl opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10">
+                                ₪{d.val.toLocaleString()}
                             </div>
-                            
-                            {/* Bar */}
-                            <div className="w-full max-w-[100px] bg-slate-200/50 rounded-t-2xl h-full flex items-end overflow-hidden relative shadow-md">
-                                <div 
-                                    style={{height: `${(d.val/max)*100}%`}} 
-                                    className={`w-full transition-all duration-1000 ease-out relative
-                                        ${i===0 ? 'bg-gradient-to-t from-green-600 to-green-400' : 
-                                          i===1 ? 'bg-gradient-to-t from-orange-500 to-amber-400' : 
-                                          'bg-gradient-to-t from-red-600 to-red-400'}`}
-                                >
-                                    <div className="absolute top-0 left-0 w-full h-[1px] bg-white/50"></div>
+                            <div className="w-full max-w-[80px] bg-slate-200/50 rounded-t-xl h-full flex items-end overflow-hidden relative shadow-md">
+                                <div style={{height: `${(d.val/max)*100}%`}} 
+                                     className={`w-full transition-all duration-1000 ease-out ${i===0?'bg-green-500':'bg-red-500'}`}>
                                 </div>
                             </div>
-                            
-                            {/* Label */}
-                            <span className="mt-4 text-slate-600 font-bold text-lg">{d.name}</span>
+                            <span className="mt-4 text-slate-600 font-bold text-sm">{d.name}</span>
                         </div>
                     ))}
                 </div>
             );
         };
 
-        // --- 3. SLIDES (DEFINED IN ORDER) ---
+        // --- 3. SLIDE DEFINITIONS (MUST BE BEFORE APP) ---
 
         const CoverSlide = ({ next }) => (
             <div className="flex flex-col items-center justify-center h-full text-center relative z-10">
                 <div className="glass px-8 py-3 rounded-full text-blue-700 font-bold text-lg mb-10 flex items-center gap-3 animate-enter border-blue-200 shadow-sm">
-                    <Icon name="Sparkles" size={20}/> חדשנות רפואית 2025
+                    <SimpleIcon name="Sparkles" size={20}/> מהפכת הדיאגנוסטיקה הביתית
                 </div>
-                
-                <h1 className="text-[7rem] font-black text-slate-900 mb-6 leading-[0.9] tracking-tight animate-enter delay-100 drop-shadow-sm">
+                <h1 className="text-[6rem] font-black text-slate-900 mb-6 leading-[0.9] tracking-tight animate-enter delay-100 drop-shadow-sm">
                     שותפות אסטרטגית <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-teal-500">
-                        לרפואה מונעת
-                    </span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-teal-500">לרפואה מונעת</span>
                 </h1>
-                
                 <p className="text-3xl text-slate-600 max-w-5xl mb-16 font-light leading-relaxed animate-enter delay-200">
-                    פלטפורמת AI המשלבת בדיקות מעבדה מדויקות עם אפליקציה חכמה.
-                    <br/>
+                    פלטפורמת AI המשלבת בדיקות מעבדה מדויקות עם אפליקציה חכמה.<br/>
                     <strong className="text-slate-900 font-medium">העלאת היענות • גילוי מוקדם • חיסכון תפעולי עצום</strong>
                 </p>
-                
                 <button onClick={next} className="animate-enter delay-300 group bg-slate-900 hover:bg-blue-600 text-white text-2xl px-16 py-6 rounded-full font-bold shadow-2xl transition-all duration-300 hover:scale-105 flex items-center gap-4 border border-white/20">
-                    התחל מצגת <Icon name="ArrowLeft" className="group-hover:-translate-x-2 transition-transform"/>
+                    התחל מצגת <SimpleIcon name="ArrowLeft" className="group-hover:-translate-x-2 transition-transform"/>
                 </button>
             </div>
         );
 
         const StrategySlide = () => (
-            <div className="flex items-center h-full px-12 gap-20 relative z-10">
+            <div className="flex items-center h-full px-16 gap-20 relative z-10">
                 <div className="flex-1 space-y-10 animate-enter">
                     <div className="border-r-8 border-blue-600 pr-10">
-                        <h2 className="text-7xl font-black text-slate-800 mb-4">האתגר הלאומי</h2>
+                        <h2 className="text-6xl font-black text-slate-800 mb-4">האתגר הלאומי</h2>
                         <p className="text-3xl text-slate-500 font-light">למה אנחנו מפספסים גילוי מוקדם?</p>
                     </div>
                     <div className="space-y-6">
                         {[
-                            {icon: 'TrendingUp', color: 'red', title: 'היענות נמוכה', desc: 'בדיקות סקר (FOB) נתפסות כלא נעימות ומסורבלות לוגיסטית.'},
-                            {icon: 'Activity', color: 'orange', title: 'עומס מומחים', desc: 'זמני המתנה ארוכים לגסטרואנטרולוגים עקב חוסר סינון יעיל (Triage).'},
-                            {icon: 'Smartphone', color: 'blue', title: 'ציפייה לדיגיטל', desc: 'המטופלים דורשים פתרונות מידיים, נגישים וביתיים (Tele-health).'}
+                            {icon:'TrendingUp', color:'red', title:'היענות נמוכה', desc:'בדיקות סקר (FOB) נתפסות כלא נעימות ומסורבלות.'},
+                            {icon:'Activity', color:'orange', title:'עומס מומחים', desc:'זמני המתנה ארוכים לגסטרואנטרולוגים.'},
+                            {icon:'Smartphone', color:'blue', title:'ציפייה לדיגיטל', desc:'המטופלים דורשים פתרונות מיידיים וביתיים.'}
                         ].map((item, i) => (
-                            <div key={i} className="glass bg-white/60 p-6 rounded-3xl flex gap-6 items-center shadow-sm hover:shadow-md transition-all">
-                                <div className={`bg-${item.color}-100 p-5 rounded-2xl text-${item.color}-600`}><Icon name={item.icon} size={32}/></div>
+                            <div key={i} className="glass bg-white/60 p-6 rounded-3xl flex items-center gap-6 shadow-sm hover:shadow-md transition-all">
+                                <div className={`bg-${item.color}-100 p-5 rounded-2xl text-${item.color}-600`}><SimpleIcon name={item.icon} size={32}/></div>
                                 <div><h3 className="text-2xl font-bold text-slate-800">{item.title}</h3><p className="text-xl text-slate-600">{item.desc}</p></div>
                             </div>
                         ))}
                     </div>
                 </div>
-                <div className="flex-1 glass bg-white/80 p-12 rounded-[3rem] shadow-2xl border border-white animate-enter delay-100 h-[700px] flex flex-col">
+                <div className="flex-1 glass bg-white/80 p-12 rounded-[3rem] shadow-2xl border border-white animate-enter delay-100 h-[600px] flex flex-col">
                     <h3 className="text-4xl font-bold text-center text-slate-800 mb-2">מחיר ההזנחה (CRC)</h3>
-                    <p className="text-center text-xl text-slate-500 mb-8">עלות טיפול שנתית ממוצעת למטופל</p>
+                    <p className="text-center text-xl text-slate-500 mb-8">עלות טיפול שנתית למטופל</p>
                     <div className="flex-1 flex items-end pb-8">
-                        <ProChart data={[{name:'גילוי מוקדם', val:30000}, {name:'שלב 3', val:180000}, {name:'שלב 4 (גרורתי)', val:350000}]} />
+                        <CssBarChart data={[{name:'גילוי מוקדם', val:30000}, {name:'שלב 3', val:180000}, {name:'שלב 4', val:350000}]} />
                     </div>
                     <div className="bg-red-50 text-red-700 text-2xl font-bold text-center py-4 rounded-2xl border border-red-100 flex justify-center gap-3">
-                        <Icon name="AlertTriangle" size={32}/> גילוי מאוחר עולה למערכת פי 10!
+                        <SimpleIcon name="AlertTriangle" size={32}/> גילוי מאוחר עולה למערכת פי 10!
                     </div>
                 </div>
             </div>
         );
 
         const DigitalSolutionSlide = () => (
-            <div className="h-full flex flex-col justify-center px-12 relative z-10">
+            <div className="h-full flex flex-col justify-center px-16 relative z-10">
                 <div className="text-center mb-16 animate-enter">
                     <h2 className="text-6xl font-black text-slate-800 mb-4">הפתרון הדיגיטלי</h2>
                     <p className="text-3xl text-slate-500 font-light">מעבדה מדויקת בכף היד – פשוט, חכם, מאובטח</p>
                 </div>
                 <div className="grid grid-cols-3 gap-12 flex-1 animate-enter delay-100">
                     {[
-                        {icon: 'Scan', color: 'blue', title: '1. סריקה פשוטה', desc: 'המטופל מבצע את הבדיקה בביתו וסורק את הקסטה באפליקציה. ממשק UX מותאם לגיל השלישי.'},
-                        {icon: 'BrainCircuit', color: 'indigo', title: '2. פענוח AI', desc: 'אלגוריתם Computer Vision המזהה פסים חלשים ביותר (Faint Lines) ומונע טעויות אנוש.'},
-                        {icon: 'Database', color: 'teal', title: '3. סגירת מעגל', desc: 'אינטגרציה מלאה לתיק הרפואי (EMR). זימון תורים אוטומטי במקרה של תוצאה חיובית.'}
+                        {icon:'Scan', color:'blue', title:'1. סריקה פשוטה', desc:'המטופל מבצע את הבדיקה בביתו וסורק באפליקציה.'},
+                        {icon:'BrainCircuit', color:'indigo', title:'2. פענוח AI', desc:'אלגוריתם Computer Vision המזהה פסים חלשים ומבטל טעויות.'},
+                        {icon:'Database', color:'teal', title:'3. סגירת מעגל', desc:'שידור מוצפן לתיק הרפואי. זימון תור אוטומטי בחיובי.'}
                     ].map((card, i) => (
-                        <div key={i} className="glass bg-white/70 p-12 rounded-[3rem] text-center flex flex-col items-center hover:-translate-y-4 transition-transform duration-500 shadow-lg border border-white">
-                            <div className={`bg-${card.color}-100 p-8 rounded-full text-${card.color}-600 mb-8 shadow-inner`}><Icon name={card.icon} size={64}/></div>
+                        <div key={i} className="glass bg-white/70 p-10 rounded-[3rem] text-center flex flex-col items-center hover:-translate-y-4 transition-transform duration-500 shadow-lg border border-white">
+                            <div className={`bg-${card.color}-100 p-8 rounded-full text-${card.color}-600 mb-8 shadow-inner`}><SimpleIcon name={card.icon} size={64}/></div>
                             <h3 className="text-3xl font-bold text-slate-800 mb-4">{card.title}</h3>
                             <p className="text-2xl text-slate-600 leading-relaxed">{card.desc}</p>
                         </div>
                     ))}
                 </div>
-                <div className="mt-16 flex justify-center gap-10 animate-enter delay-200">
-                    <div className="glass-dark px-10 py-5 rounded-full text-xl font-bold flex gap-4 items-center shadow-2xl"><Icon name="Check"/> זמינות 24/7</div>
-                    <div className="glass px-10 py-5 rounded-full text-xl font-bold flex gap-4 items-center shadow-xl text-slate-700"><Icon name="Shield"/> תקן GDPR / HIPAA</div>
+                <div className="mt-16 flex justify-center gap-10 animate-enter delay-200 pb-10">
+                    <div className="glass-dark px-10 py-5 rounded-full text-xl font-bold flex gap-4 items-center shadow-2xl"><SimpleIcon name="Check"/> זמינות 24/7</div>
+                    <div className="glass px-10 py-5 rounded-full text-xl font-bold flex gap-4 items-center shadow-xl text-slate-700"><SimpleIcon name="Shield"/> תקן GDPR / HIPAA</div>
                 </div>
             </div>
         );
@@ -251,30 +267,21 @@
             const saved = detected * 150000;
 
             return (
-                <div className="h-full flex flex-col px-12 pt-8 relative z-10">
+                <div className="h-full flex flex-col px-16 pt-10 relative z-10">
                     <div className="mb-10 animate-enter">
                         <h2 className="text-5xl font-black text-slate-800">מחשבון חיסכון FOB</h2>
                         <p className="text-2xl text-slate-500 mt-2">סימולציה חיה: השפעת האפליקציה על גילוי מוקדם</p>
                     </div>
-                    <div className="flex gap-16 flex-1 animate-enter delay-100 pb-8">
+                    <div className="flex gap-16 flex-1 animate-enter delay-100 pb-10">
                         <div className="w-1/2 glass bg-white/80 p-12 rounded-[3rem] flex flex-col justify-center space-y-12 shadow-xl">
-                            <h3 className="text-3xl font-bold text-slate-700 flex items-center gap-4 border-b pb-6"><Icon name="Sliders" size={32}/> פרמטרים</h3>
-                            <div>
-                                <label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">אוכלוסיית יעד <span className="text-blue-600 bg-blue-50 px-4 py-1 rounded-xl">{pop.toLocaleString()}</span></label>
-                                <input type="range" min="10000" max="200000" step="5000" value={pop} onChange={e=>setPop(+e.target.value)} className="w-full"/>
-                            </div>
-                            <div>
-                                <label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">היענות נוכחית <span className="text-slate-500 bg-slate-100 px-4 py-1 rounded-xl">{comp}%</span></label>
-                                <input type="range" min="30" max="80" value={comp} onChange={e=>setComp(+e.target.value)} className="w-full"/>
-                            </div>
-                            <div className="bg-green-50 p-8 rounded-3xl border-2 border-green-100">
-                                <label className="flex justify-between text-2xl font-bold text-green-800 mb-4">תוספת היענות (BMT) <span className="bg-white text-green-600 px-4 py-1 rounded-xl shadow-sm">+{boost}%</span></label>
-                                <input type="range" min="5" max="30" value={boost} onChange={e=>setBoost(+e.target.value)} className="w-full accent-green-600"/>
-                            </div>
+                            <h3 className="text-3xl font-bold text-slate-700 flex items-center gap-4 border-b pb-6"><SimpleIcon name="Sliders" size={32}/> פרמטרים</h3>
+                            <div><label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">אוכלוסיית יעד <span className="text-blue-600 bg-blue-50 px-4 py-1 rounded-xl">{pop.toLocaleString()}</span></label><input type="range" min="10000" max="200000" step="5000" value={pop} onChange={e=>setPop(+e.target.value)} className="w-full"/></div>
+                            <div><label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">היענות נוכחית <span className="text-slate-500 bg-slate-100 px-4 py-1 rounded-xl">{comp}%</span></label><input type="range" min="30" max="80" value={comp} onChange={e=>setComp(+e.target.value)} className="w-full"/></div>
+                            <div className="bg-green-50 p-8 rounded-3xl border-2 border-green-100"><label className="flex justify-between text-2xl font-bold text-green-800 mb-4">תוספת היענות (BMT) <span className="text-green-700 bg-white px-4 py-1 rounded-xl shadow-sm">+{boost}%</span></label><input type="range" min="5" max="30" value={boost} onChange={e=>setBoost(+e.target.value)} className="w-full"/></div>
                         </div>
                         <div className="w-1/2 flex flex-col gap-8">
-                            <div className="glass-dark p-12 rounded-[3rem] shadow-2xl relative overflow-hidden flex-1 flex flex-col justify-center text-center">
-                                <div className="relative z-10 space-y-10">
+                            <div className="glass-dark p-12 rounded-[3rem] shadow-2xl flex-1 flex flex-col justify-center text-center">
+                                <div className="space-y-10">
                                     <div><div className="text-slate-400 mb-2 uppercase tracking-widest font-bold">בדיקות סקר נוספות</div><div className="text-7xl font-black text-blue-400">+{extra.toLocaleString()}</div></div>
                                     <div><div className="text-slate-400 mb-2 uppercase tracking-widest font-bold">גילוי מוקדם (מקרים)</div><div className="text-7xl font-black text-green-400">~{detected}</div></div>
                                 </div>
@@ -282,9 +289,6 @@
                             <div className="glass bg-white p-12 rounded-[3rem] shadow-xl border-t-8 border-green-500 text-center flex-1 flex flex-col justify-center items-center">
                                 <div className="text-2xl text-slate-500 font-bold mb-4 uppercase tracking-widest">חיסכון כלכלי משוער</div>
                                 <div className="text-8xl font-black text-green-600 tracking-tighter">₪{saved.toLocaleString()}</div>
-                                <div className="mt-6 bg-green-50 text-green-800 text-sm px-4 py-2 rounded-full font-medium border border-green-100">
-                                    חיסכון של 150k ש"ח לכל מקרה של גילוי מוקדם
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -298,30 +302,30 @@
             const savedMoney = (savedColo * 2500) - (Math.floor(pop * 0.8) * 150);
 
             return (
-                <div className="h-full flex flex-col px-12 pt-8 relative z-10">
+                <div className="h-full flex flex-col px-16 pt-10 relative z-10">
                     <div className="mb-10 animate-enter">
                         <h2 className="text-5xl font-black text-slate-800">Calprotectin: מסננת חכמה</h2>
                         <p className="text-2xl text-slate-500 mt-2">פתרון לעומס במכוני הגסטרו: הבדלה בין IBD ל-IBS</p>
                     </div>
-                    <div className="flex gap-16 flex-1 animate-enter delay-100 pb-8">
+                    <div className="flex gap-16 flex-1 animate-enter delay-100 pb-10">
                         <div className="w-1/2 glass bg-white/80 p-12 rounded-[3rem] shadow-xl border border-indigo-100 flex flex-col justify-center">
-                            <h3 className="text-3xl font-bold text-indigo-700 mb-12 flex items-center gap-4"><Icon name="Activity" size={40}/> תרחיש קליני (שנתי)</h3>
+                            <h3 className="text-3xl font-bold text-indigo-700 mb-12 flex items-center gap-4"><SimpleIcon name="Activity" size={40}/> תרחיש קליני (שנתי)</h3>
                             <label className="block text-2xl font-bold text-slate-700 mb-6">פניות למרפאה עם תלונות בטן</label>
                             <input type="range" min="1000" max="50000" step="1000" value={pop} onChange={e=>setPop(+e.target.value)} className="w-full mb-4 accent-indigo-600"/>
                             <div className="text-right font-black text-indigo-600 text-6xl mb-12">{pop.toLocaleString()}</div>
                             <div className="bg-indigo-50 p-8 rounded-3xl text-indigo-900 border border-indigo-100 text-xl leading-relaxed">
-                                <strong className="block mb-4 text-2xl flex items-center gap-3"><Icon name="AlertCircle"/> הבעיה כיום:</strong>
-                                ללא בדיקת סקר זמינה, רוב המטופלים עם תסמונת המעי הרגיז (IBS) נשלחים לקולונוסקופיה מיותרת ויקרה, במקום לקבל טיפול בקהילה.
+                                <strong className="block mb-4 text-2xl flex items-center gap-3"><SimpleIcon name="AlertCircle"/> הבעיה כיום:</strong>
+                                ללא בדיקת סקר זמינה, רוב המטופלים עם תסמונת המעי הרגיז (IBS) נשלחים לקולונוסקופיה מיותרת ויקרה.
                             </div>
                         </div>
                         <div className="w-1/2 flex flex-col gap-10 justify-center">
                             <div className="glass bg-white p-12 rounded-[3rem] border-r-8 border-indigo-500 flex justify-between items-center hover:scale-[1.02] transition-transform shadow-xl">
-                                <div><div className="text-slate-500 font-bold text-2xl mb-2">קולונוסקופיות שנחסכו</div><div className="text-7xl font-black text-slate-800">{savedColo.toLocaleString()}</div><div className="text-lg text-slate-400 mt-2">הפחתת עומס תורים</div></div>
-                                <div className="bg-indigo-100 p-8 rounded-full text-indigo-600"><Icon name="Microscope" size={64}/></div>
+                                <div><div className="text-slate-500 font-bold text-2xl mb-2">קולונוסקופיות שנחסכו</div><div className="text-7xl font-black text-slate-800">{savedColo.toLocaleString()}</div></div>
+                                <div className="bg-indigo-100 p-8 rounded-full text-indigo-600"><SimpleIcon name="Microscope" size={64}/></div>
                             </div>
                             <div className="glass bg-white p-12 rounded-[3rem] border-r-8 border-green-500 flex justify-between items-center hover:scale-[1.02] transition-transform shadow-xl">
-                                <div><div className="text-slate-500 font-bold text-2xl mb-2">חיסכון כספי ישיר</div><div className="text-7xl font-black text-green-600">₪{savedMoney.toLocaleString()}</div><div className="text-lg text-slate-400 mt-2">בניכוי עלות הבדיקות</div></div>
-                                <div className="bg-green-100 p-8 rounded-full text-green-600"><Icon name="Banknote" size={64}/></div>
+                                <div><div className="text-slate-500 font-bold text-2xl mb-2">חיסכון כספי ישיר</div><div className="text-7xl font-black text-green-600">₪{savedMoney.toLocaleString()}</div></div>
+                                <div className="bg-green-100 p-8 rounded-full text-green-600"><SimpleIcon name="Banknote" size={64}/></div>
                             </div>
                         </div>
                     </div>
@@ -330,7 +334,7 @@
         };
 
         const ProductSuiteSlide = () => (
-            <div className="h-full flex flex-col px-12 pt-8 relative z-10">
+            <div className="h-full flex flex-col px-16 pt-10 relative z-10">
                 <div className="mb-12 animate-enter">
                     <h2 className="text-5xl font-black text-slate-800">פורטפוליו בדיקות מקיף</h2>
                     <p className="text-2xl text-slate-500 mt-2">One-Stop-Shop: מעטפת דיאגנוסטית לבית ולמרפאה</p>
@@ -338,31 +342,24 @@
                 <div className="grid grid-cols-2 gap-16 flex-1 pb-12 animate-enter delay-100">
                     <div className="glass bg-white p-12 rounded-[3rem] border-t-8 border-teal-500 shadow-2xl flex flex-col">
                         <div className="flex justify-between items-start mb-10">
-                            <div className="bg-teal-50 p-6 rounded-3xl text-teal-600 shadow-sm"><Icon name="FlaskConical" size={48}/></div>
+                            <div className="bg-teal-50 p-6 rounded-3xl text-teal-600"><SimpleIcon name="FlaskConical" size={48}/></div>
                             <div className="text-left"><h3 className="text-4xl font-bold text-slate-800">גסטרו</h3><span className="text-teal-600 font-bold text-lg bg-teal-50 px-4 py-1.5 rounded-full mt-2 inline-block">התמחות ליבה</span></div>
                         </div>
                         <ul className="space-y-8 flex-1">
-                            {[
-                                {name: 'H. Pylori Ag', desc: 'מחליף תבחין נשיפה יקר.'},
-                                {name: 'Calprotectin', desc: 'סמן דלקת רגיש לניטור IBD וסינון.'},
-                                {name: 'Adeno/Rota', desc: 'פאנל ילדים לזיהוי מהיר של וירוסים.'}
-                            ].map((item, i) => (
-                                <li key={i} className="bg-slate-50 p-6 rounded-3xl flex items-center gap-6"><div className="text-teal-500"><Icon name="CheckCircle2" size={32}/></div><div><strong className="block text-2xl text-slate-800">{item.name}</strong><span className="text-xl text-slate-600">{item.desc}</span></div></li>
+                            {[{n:'H. Pylori Ag', d:'מחליף תבחין נשיפה יקר.'}, {n:'Calprotectin', d:'סמן דלקת רגיש ל-IBD.'}, {n:'Adeno/Rota', d:'פאנל ילדים מהיר.'}].map((x,i)=>(
+                                <li key={i} className="bg-slate-50 p-6 rounded-3xl flex items-center gap-6"><div className="text-teal-500"><SimpleIcon name="Check" size={32}/></div><div><strong className="block text-2xl text-slate-800">{x.n}</strong><span className="text-xl text-slate-600">{x.d}</span></div></li>
                             ))}
                         </ul>
                     </div>
                     <div className="glass bg-white p-12 rounded-[3rem] border-t-8 border-rose-500 shadow-2xl flex flex-col">
                         <div className="flex justify-between items-start mb-10">
-                            <div className="bg-rose-50 p-6 rounded-3xl text-rose-600"><Icon name="Stethoscope" size={48}/></div>
-                            <div className="text-left"><h3 className="text-4xl font-bold text-slate-800">משפחה</h3><span className="text-rose-600 font-bold text-lg bg-rose-50 px-4 py-1 rounded-full mt-2 inline-block">רפואה יומיומית</span></div>
+                            <div className="bg-rose-50 p-6 rounded-3xl text-rose-600"><SimpleIcon name="Stethoscope" size={48}/></div>
+                            <div className="text-left"><h3 className="text-4xl font-bold text-slate-800">משפחה</h3><span className="text-rose-600 font-bold text-lg bg-rose-50 px-4 py-1.5 rounded-full mt-2 inline-block">רפואה יומיומית</span></div>
                         </div>
                         <div className="grid grid-cols-2 gap-8 flex-1">
-                            {[
-                                {name: 'Covid + Flu', sub: 'Combo Test'}, {name: 'Strep A', sub: 'מניעת אנטיביוטיקה'},
-                                {name: 'Pregnancy', sub: 'hCG רגיש במיוחד'}, {name: 'Giardia', sub: 'זיהוי טפילים'}
-                            ].map((item, i) => (
-                                <div key={i} className="bg-slate-50 p-6 rounded-3xl text-center border border-slate-100 flex flex-col justify-center items-center hover:bg-rose-50 transition-colors cursor-pointer">
-                                    <strong className="block text-2xl text-slate-800 mb-2">{item.name}</strong><span className="text-lg text-slate-500 bg-white px-4 py-1 rounded-full shadow-sm">{item.sub}</span>
+                            {[{n:'Covid + Flu', s:'Combo'}, {n:'Strep A', s:'מניעה'}, {n:'Pregnancy', s:'hCG'}, {n:'Giardia', s:'טפילים'}].map((x,i)=>(
+                                <div key={i} className="bg-slate-50 p-6 rounded-3xl text-center border border-slate-100 flex flex-col justify-center items-center hover:bg-rose-50 transition-colors">
+                                    <strong className="block text-2xl text-slate-800 mb-2">{x.n}</strong><span className="text-lg text-slate-500 bg-white px-4 py-1 rounded-full shadow-sm">{x.s}</span>
                                 </div>
                             ))}
                         </div>
@@ -374,12 +371,10 @@
         const SummarySlide = () => (
             <div className="flex flex-col items-center justify-center h-full text-center px-12 animate-enter relative z-10">
                 <div className="w-full max-w-7xl glass-dark p-20 rounded-[4rem] shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600 rounded-full blur-[200px] opacity-20 -mr-40 -mt-40 animate-pulse"></div>
-                    <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-teal-500 rounded-full blur-[200px] opacity-20 -ml-40 -mb-40 animate-pulse"></div>
                     <div className="relative z-10">
-                        <div className="inline-block bg-gradient-to-br from-blue-600 to-indigo-600 p-8 rounded-[2rem] mb-12 shadow-2xl"><Icon name="Activity" size={80} className="text-white"/></div>
+                        <div className="inline-block bg-gradient-to-br from-blue-600 to-indigo-600 p-8 rounded-[2rem] mb-12 shadow-2xl"><SimpleIcon name="Activity" size={80} className="text-white"/></div>
                         <h2 className="text-7xl font-black mb-10 text-white tracking-tight">העתיד של הדיאגנוסטיקה</h2>
-                        <p className="text-4xl text-slate-300 max-w-5xl mx-auto mb-20 font-light leading-relaxed">השילוב בין בדיקות מעבדה מדויקות לטכנולוגיית AI ביתית הוא המפתח לשיפור האיכות הרפואית, חיסכון כלכלי אדיר ושירות מנצח.</p>
+                        <p className="text-4xl text-slate-300 max-w-5xl mx-auto mb-20 font-light leading-relaxed">השילוב בין בדיקות מעבדה מדויקות לטכנולוגיית AI ביתית הוא המפתח לשיפור האיכות הרפואית, חיסכון כלכלי ושירות מנצח.</p>
                         <div className="grid grid-cols-3 gap-12 text-right">
                             <div className="glass p-10 rounded-[2.5rem] bg-white/10 border-white/20"><h4 className="text-3xl font-bold text-blue-400 mb-4">קליני</h4><p className="text-slate-300 text-xl">דיוק מעבדתי ומניעת טעויות.</p></div>
                             <div className="glass p-10 rounded-[2.5rem] bg-white/10 border-white/20"><h4 className="text-3xl font-bold text-green-400 mb-4">כלכלי</h4><p className="text-slate-300 text-xl">חיסכון אדיר בטיפולים.</p></div>
@@ -390,7 +385,7 @@
             </div>
         );
 
-        // --- 4. MAIN APP ---
+        // --- 4. APP CONTROLLER ---
 
         const App = () => {
             const [slide, setSlide] = useState(0);
@@ -400,15 +395,13 @@
             const [scale, setScale] = useState(1);
             useEffect(() => {
                 const resize = () => {
-                    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+                    const s = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
                     setScale(s);
                 };
                 window.addEventListener('resize', resize);
                 resize();
                 return () => window.removeEventListener('resize', resize);
             }, []);
-
-            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [slide]);
 
             return (
                 <div id="cinema-container" style={{ transform: `scale(${scale})` }}>
@@ -418,15 +411,7 @@
                     </div>
 
                     <div className="h-full flex flex-col relative z-10">
-                        <div className="h-28 flex items-center justify-between px-16 bg-white/50 backdrop-blur-sm border-b border-white/40">
-                            <Logo />
-                            <div className="flex items-center gap-6">
-                                <div className="flex gap-2 bg-slate-200/50 p-2 rounded-full">
-                                    {Array.from({length:total}).map((_,i)=><div key={i} className={`h-3 rounded-full transition-all duration-500 ${i===slide?'w-12 bg-blue-600':'w-3 bg-slate-300'}`}/>)}
-                                </div>
-                                <span className="text-xl font-bold text-slate-500 w-20 text-center">{slide+1} / {total}</span>
-                            </div>
-                        </div>
+                        <Header currentSlide={slide} totalSlides={total} />
 
                         <div className="flex-1 overflow-hidden relative">
                             {slide === 0 && <CoverSlide next={()=>setSlide(1)} />}
@@ -438,10 +423,10 @@
                             {slide === 6 && <SummarySlide />}
                         </div>
 
-                        <div className="h-28 flex items-center justify-between px-16">
-                            <button onClick={()=>setSlide(Math.max(0, slide-1))} disabled={slide===0} className={`flex items-center gap-3 px-8 py-4 rounded-full font-bold text-xl transition-all ${slide===0?'opacity-0':'bg-white shadow-lg text-slate-700 hover:scale-105'}`}><Icon name="ChevronRight" size={28}/> הקודם</button>
+                        <div className="h-28 flex items-center justify-between px-16 bg-white/80 backdrop-blur-md border-t border-white/50">
+                            <button onClick={()=>setSlide(Math.max(0, slide-1))} disabled={slide===0} className={`flex items-center gap-3 px-8 py-4 rounded-full font-bold text-xl transition-all ${slide===0?'opacity-0':'bg-white shadow-lg text-slate-700 hover:scale-105'}`}><SimpleIcon name="ChevronRight" size={28}/> הקודם</button>
                             <div className="text-slate-400 text-lg font-medium tracking-widest uppercase">BMT Diagnostics Confidential © 2025</div>
-                            <button onClick={()=>setSlide(Math.min(total-1, slide+1))} disabled={slide===total-1} className={`flex items-center gap-3 px-12 py-4 rounded-full font-bold text-xl transition-all ${slide===total-1?'opacity-0':'bg-slate-900 shadow-2xl text-white hover:bg-blue-600 hover:scale-105'}`}>{slide===total-1?'':'הבא'} <Icon name="ChevronLeft" size={28}/></button>
+                            <button onClick={()=>setSlide(Math.min(total-1, slide+1))} disabled={slide===total-1} className={`flex items-center gap-3 px-12 py-4 rounded-full font-bold text-xl transition-all ${slide===total-1?'opacity-0':'bg-slate-900 shadow-2xl text-white hover:bg-blue-600 hover:scale-105'}`}>{slide===total-1?'':'הבא'} <SimpleIcon name="ChevronLeft" size={28}/></button>
                         </div>
                     </div>
                 </div>
