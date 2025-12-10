@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMT Diagnostics Presentation</title>
+    <title>BMT Diagnostics - Final Premium Deck</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -12,485 +12,437 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
-    
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
-        body {
-            font-family: 'Heebo', sans-serif;
-            background-color: #f8fafc;
-            margin: 0;
-            padding: 0;
+        body { 
+            background-color: #0f172a; /* Dark background outside slide */
+            margin: 0; 
+            padding: 0; 
             overflow: hidden; 
+            height: 100vh; 
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Heebo', sans-serif;
         }
 
-        .slide-enter {
-            opacity: 0;
-            transform: translateY(20px);
+        /* Cinema Canvas - Fixed Resolution that scales */
+        #cinema-container {
+            width: 1920px;
+            height: 1080px;
+            background-color: #f8fafc;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            /* Transform will be handled by JS */
         }
-        .slide-enter-active {
-            opacity: 1;
-            transform: translateY(0);
-            transition: opacity 500ms, transform 500ms;
+
+        /* Animations */
+        .animate-enter { animation: enter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(40px); }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        
+        @keyframes enter { to { opacity: 1; transform: translateY(0); } }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
         }
         
-        /* Custom Scrollbar */
-        .custom-scroll::-webkit-scrollbar {
-            width: 8px;
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
         }
-        .custom-scroll::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
-        .custom-scroll::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+
+        /* Background Decor */
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; opacity: 0.5; }
+        .blob-1 { width: 700px; height: 700px; top: -200px; right: -200px; background: #3b82f6; animation: float 10s infinite alternate; }
+        .blob-2 { width: 600px; height: 600px; bottom: -100px; left: -100px; background: #14b8a6; animation: float 12s infinite alternate-reverse; }
+
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, 40px); } }
+
+        /* Custom Slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%; background: #2563eb; margin-top: -10px; box-shadow: 0 4px 10px rgba(37,99,235,0.4); border: 4px solid white; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; }
     </style>
 </head>
 <body>
+
     <div id="root"></div>
 
     <script type="text/babel">
+        // --- 1. SETUP ---
         const { useState, useEffect, useRef } = React;
-        const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, FunnelChart, Funnel, LabelList } = Recharts;
 
-        // --- Icon Component Wrapper ---
+        // --- 2. BASE COMPONENTS (DEFINED FIRST TO AVOID ERRORS) ---
+
+        // Icon Component using Lucide
         const Icon = ({ name, size = 24, className = "" }) => {
-            const iconRef = useRef(null);
-            
+            const ref = useRef(null);
             useEffect(() => {
-                if (window.lucide && iconRef.current) {
+                if (window.lucide && ref.current) {
                     const iconName = name.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '');
-                    iconRef.current.setAttribute('data-lucide', iconName);
-                    
-                    // Create icons only inside this specific element
-                    window.lucide.createIcons({
-                        root: iconRef.current.parentNode,
-                        nameAttr: 'data-lucide',
-                        attrs: {
-                            width: size,
-                            height: size,
-                            class: className
-                        }
-                    });
+                    ref.current.setAttribute('data-lucide', iconName);
+                    window.lucide.createIcons({ root: ref.current.parentNode });
                 }
-            }, [name, size, className]);
-
-            return <i ref={iconRef} className={className} style={{ width: size, height: size, display: 'inline-block' }}></i>;
+            }, [name]);
+            return <i ref={ref} className={className} style={{ width: size, height: size, display: 'inline-block' }}></i>;
         };
 
-        // --- Header Component ---
-        const Header = ({ currentSlide, totalSlides }) => (
-            <div className="fixed top-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-sm shadow-sm z-50 flex items-center justify-between px-6 md:px-8 border-b border-gray-100 font-sans" dir="rtl">
-                <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm shrink-0">B</div>
-                    <span className="text-xl font-bold text-gray-800 tracking-tight hidden md:block">BMT Diagnostics</span>
+        // Logo with Fallback
+        const Logo = () => (
+            <div className="flex items-center gap-4 z-50">
+                <img 
+                    src="B.M.T Logo.jpg" 
+                    alt="BMT" 
+                    className="h-20 w-auto object-contain drop-shadow-sm"
+                    onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
+                />
+                <div className="hidden flex-col leading-none" style={{display:'none'}}>
+                    <span className="text-4xl font-black text-slate-800 tracking-tighter">BM<span className="text-red-600">T</span></span>
+                    <span className="text-xs text-slate-500 tracking-[0.3em] font-bold uppercase mt-1">Diagnostics</span>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                        {Array.from({ length: totalSlides }).map((_, i) => (
-                            <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-8 bg-blue-600' : 'w-2 bg-gray-200'}`} />
-                        ))}
+            </div>
+        );
+
+        // Custom CSS Chart (Crash-proof)
+        const ProChart = ({ data, unit = "₪" }) => {
+            const max = Math.max(...data.map(d => d.val));
+            return (
+                <div className="w-full h-80 flex items-end justify-around gap-8 px-8 relative">
+                    {/* Grid Lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 opacity-20">
+                        {[1,2,3,4,5].map(i => <div key={i} className="w-full h-px bg-slate-400 border-t border-dashed"></div>)}
                     </div>
+                    
+                    {data.map((d, i) => (
+                        <div key={i} className="flex-1 h-full flex flex-col justify-end items-center group relative z-10">
+                            {/* Floating Value Bubble */}
+                            <div className="mb-4 bg-slate-800 text-white px-4 py-2 rounded-xl font-bold text-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0 duration-300">
+                                {unit}{d.val.toLocaleString()}
+                            </div>
+                            
+                            {/* Bar */}
+                            <div className="w-full max-w-[100px] bg-slate-200/50 rounded-t-2xl h-full flex items-end overflow-hidden relative shadow-md">
+                                <div 
+                                    style={{height: `${(d.val/max)*100}%`}} 
+                                    className={`w-full transition-all duration-1000 ease-out relative
+                                        ${i===0 ? 'bg-gradient-to-t from-green-600 to-green-400' : 
+                                          i===1 ? 'bg-gradient-to-t from-orange-500 to-amber-400' : 
+                                          'bg-gradient-to-t from-red-600 to-red-400'}`}
+                                >
+                                    <div className="absolute top-0 left-0 w-full h-[1px] bg-white/50"></div>
+                                </div>
+                            </div>
+                            
+                            {/* Label */}
+                            <span className="mt-4 text-slate-600 font-bold text-lg">{d.name}</span>
+                        </div>
+                    ))}
                 </div>
-            </div>
-        );
+            );
+        };
 
-        // --- Slide Container ---
-        const SlideContainer = ({ children }) => (
-            <div className="absolute inset-0 pt-24 pb-24 overflow-y-auto custom-scroll w-full">
-                <div className="min-h-full flex flex-col justify-center px-4 md:px-12 max-w-7xl mx-auto py-4">
-                    {children}
+        // --- 3. SLIDES (DEFINED IN ORDER) ---
+
+        const CoverSlide = ({ next }) => (
+            <div className="flex flex-col items-center justify-center h-full text-center relative z-10">
+                <div className="glass px-8 py-3 rounded-full text-blue-700 font-bold text-lg mb-10 flex items-center gap-3 animate-enter border-blue-200 shadow-sm">
+                    <Icon name="Sparkles" size={20}/> חדשנות רפואית 2025
                 </div>
-            </div>
-        );
-
-        // --- SLIDES CONTENT ---
-
-        const CoverSlide = ({ nextSlide }) => (
-            <div className="flex flex-col items-center justify-center text-center space-y-8">
-                <div className="bg-blue-100 text-blue-700 px-6 py-2 rounded-full text-sm font-bold animate-pulse tracking-wide inline-block">
-                    מצגת מנהלים - סודי וחסוי
-                </div>
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 leading-tight">
-                    לסגור את הפער <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">בגילוי מוקדם של סרטן המעי הגס</span>
+                
+                <h1 className="text-[7rem] font-black text-slate-900 mb-6 leading-[0.9] tracking-tight animate-enter delay-100 drop-shadow-sm">
+                    שותפות אסטרטגית <br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-teal-500">
+                        לרפואה מונעת
+                    </span>
                 </h1>
-                <p className="text-lg md:text-2xl text-slate-500 max-w-3xl mx-auto font-light leading-relaxed">
-                    כיצד טכנולוגיית ה-Home Diagnostics של BMT Diagnostics מעלה את ההיענות לבדיקות FOB ללא עומס על המעבדה.
+                
+                <p className="text-3xl text-slate-600 max-w-5xl mb-16 font-light leading-relaxed animate-enter delay-200">
+                    פלטפורמת AI המשלבת בדיקות מעבדה מדויקות עם אפליקציה חכמה.
+                    <br/>
+                    <strong className="text-slate-900 font-medium">העלאת היענות • גילוי מוקדם • חיסכון תפעולי עצום</strong>
                 </p>
-                <button onClick={nextSlide} className="group bg-slate-900 hover:bg-blue-600 text-white text-lg px-10 py-4 rounded-full font-bold shadow-xl transition-all flex items-center gap-3 mx-auto">
-                    לנתונים
-                    <Icon name="ArrowLeft" size={20} className="group-hover:-translate-x-1 transition-transform" />
+                
+                <button onClick={next} className="animate-enter delay-300 group bg-slate-900 hover:bg-blue-600 text-white text-2xl px-16 py-6 rounded-full font-bold shadow-2xl transition-all duration-300 hover:scale-105 flex items-center gap-4 border border-white/20">
+                    התחל מצגת <Icon name="ArrowLeft" className="group-hover:-translate-x-2 transition-transform"/>
                 </button>
             </div>
         );
 
-        const TheProblemSlide = () => (
-            <div className="flex flex-col lg:flex-row gap-12 items-center w-full">
-                <div className="flex-1 space-y-8 w-full">
-                    <h2 className="text-3xl md:text-5xl font-bold text-slate-800 border-r-8 border-red-500 pr-6">המחיר של גילוי מאוחר</h2>
-                    <p className="text-lg md:text-xl text-slate-600 leading-relaxed">
-                        הבעיה אינה רק לוגיסטית, אלא כלכלית ורפואית.
-                        <br/>
-                        כאשר מטופלים נוטשים את התהליך בגלל סרבול, אנחנו מפספסים את חלון ההזדמנויות למניעה.
-                    </p>
-                    <div className="bg-red-50 border-r-4 border-red-400 p-6 rounded-lg">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Icon name="TrendingUp" size={24} className="text-red-600" />
-                            <h3 className="font-bold text-red-800 text-lg">המשמעות הכלכלית</h3>
-                        </div>
-                        <p className="text-red-700">העלות של טיפול בסרטן גרורתי (שהתגלה מאוחר) גבוהה פי 10 ויותר מאשר הסרה פשוטה של פוליפ בשלב מוקדם.</p>
+        const StrategySlide = () => (
+            <div className="flex items-center h-full px-12 gap-20 relative z-10">
+                <div className="flex-1 space-y-10 animate-enter">
+                    <div className="border-r-8 border-blue-600 pr-10">
+                        <h2 className="text-7xl font-black text-slate-800 mb-4">האתגר הלאומי</h2>
+                        <p className="text-3xl text-slate-500 font-light">למה אנחנו מפספסים גילוי מוקדם?</p>
                     </div>
-                </div>
-                
-                {/* Cost Comparison Chart */}
-                <div className="flex-1 w-full bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex flex-col justify-center min-h-[400px]">
-                    <div className="text-center mb-6">
-                        <h4 className="font-bold text-slate-700 text-lg">עלות ממוצעת למטופל (ש"ח)</h4>
-                    </div>
-                    <div className="w-full h-[300px]" dir="ltr">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={[
-                                { name: 'גילוי מוקדם (מניעה)', cost: 15000, fill: '#3b82f6' },
-                                { name: 'גילוי מאוחר (טיפול)', cost: 250000, fill: '#ef4444' },
-                            ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} barSize={60}>
-                                <XAxis dataKey="name" tick={{fontSize: 14, fontWeight: 'bold'}} interval={0} axisLine={false} tickLine={false} />
-                                <YAxis hide />
-                                <Tooltip cursor={{fill: 'transparent'}} formatter={(value) => `₪${value.toLocaleString()}`} />
-                                <Bar dataKey="cost" radius={[10, 10, 0, 0]}>
-                                    {
-                                        [{fill: '#3b82f6'}, {fill: '#ef4444'}].map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))
-                                    }
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="mt-4 text-center text-slate-500 text-sm">
-                        * הערכה ממוצעת לעלות טיפול אונקולוגי שנתי מול פרוצדורה מניעתית
-                    </div>
-                </div>
-            </div>
-        );
-
-        const SolutionSlide = () => (
-            <div className="flex flex-col w-full space-y-12">
-                <div className="text-center">
-                    <h2 className="text-3xl md:text-5xl font-bold text-slate-800">הפתרון: מעבדה דיגיטלית בבית</h2>
-                    <p className="text-xl text-slate-500 mt-3">הנגשת בדיקות המעבדה למטופל באמצעות הסמארטפון</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border-t-4 border-blue-500 text-center flex flex-col items-center hover:translate-y-[-5px] transition-transform">
-                        <div className="bg-blue-50 w-24 h-24 rounded-full flex items-center justify-center mb-6">
-                            <Icon name="Smartphone" size={48} className="text-blue-600" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-3">1. ביצוע בבית</h3>
-                        <p className="text-slate-600">המטופל מבצע את הבדיקה בנוחות ובפרטיות ביתו. אין צורך לשמור במקרר או לנסוע למרפאה.</p>
-                    </div>
-
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border-t-4 border-indigo-500 text-center flex flex-col items-center hover:translate-y-[-5px] transition-transform">
-                        <div className="bg-indigo-50 w-24 h-24 rounded-full flex items-center justify-center mb-6">
-                            <Icon name="ShieldCheck" size={48} className="text-indigo-600" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-3">2. בקרת איכות (AI)</h3>
-                        <p className="text-slate-600">מנגנון אבטחת איכות המלווה את המטופל ומוודא שהדגימה תקינה. משמש ככלי תומך החלטה לרופא ולא מחליף אותו.</p>
-                    </div>
-
-                    <div className="bg-white p-8 rounded-3xl shadow-lg border-t-4 border-green-500 text-center flex flex-col items-center hover:translate-y-[-5px] transition-transform">
-                        <div className="bg-green-50 w-24 h-24 rounded-full flex items-center justify-center mb-6">
-                            <Icon name="CheckCircle2" size={48} className="text-green-600" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-3">3. דיווח אוטומטי</h3>
-                        <p className="text-slate-600">התוצאה מוצפנת ומשודרת ישירות לתיק הרפואי (EMR). הרופא מקבל תמונה מלאה ונסגר מעגל טיפולי.</p>
-                    </div>
-                </div>
-            </div>
-        );
-
-        const IntegrationSlide = () => (
-            <div className="flex flex-col lg:flex-row gap-12 items-center w-full h-full">
-                <div className="flex-1 space-y-10">
-                    <div>
-                        <h2 className="text-3xl md:text-5xl font-bold text-slate-800 border-r-8 border-blue-500 pr-6">אינטגרציה ופרטיות</h2>
-                        <p className="text-xl text-slate-600 mt-4">חיבור חלק למערכות הקופה עם דגש על אבטחת מידע</p>
-                    </div>
-                    
                     <div className="space-y-6">
-                        <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="bg-blue-100 p-3 rounded-full text-blue-600 mt-1"><Icon name="Globe" size={24} /></div>
-                            <div>
-                                <h4 className="font-bold text-lg text-slate-800">אינטגרציית WebView פשוטה</h4>
-                                <p className="text-slate-600">הוספת כפתור באפליקציית הקופה הפותח את השירות שלנו ב-WebView. הטמעה מהירה ללא פיתוח מורכב.</p>
+                        {[
+                            {icon: 'TrendingUp', color: 'red', title: 'היענות נמוכה', desc: 'בדיקות סקר (FOB) נתפסות כלא נעימות ומסורבלות לוגיסטית.'},
+                            {icon: 'Activity', color: 'orange', title: 'עומס מומחים', desc: 'זמני המתנה ארוכים לגסטרואנטרולוגים עקב חוסר סינון יעיל (Triage).'},
+                            {icon: 'Smartphone', color: 'blue', title: 'ציפייה לדיגיטל', desc: 'המטופלים דורשים פתרונות מידיים, נגישים וביתיים (Tele-health).'}
+                        ].map((item, i) => (
+                            <div key={i} className="glass bg-white/60 p-6 rounded-3xl flex gap-6 items-center shadow-sm hover:shadow-md transition-all">
+                                <div className={`bg-${item.color}-100 p-5 rounded-2xl text-${item.color}-600`}><Icon name={item.icon} size={32}/></div>
+                                <div><h3 className="text-2xl font-bold text-slate-800">{item.title}</h3><p className="text-xl text-slate-600">{item.desc}</p></div>
                             </div>
-                        </div>
-
-                        <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="bg-indigo-100 p-3 rounded-full text-indigo-600 mt-1"><Icon name="Lock" size={24} /></div>
-                            <div>
-                                <h4 className="font-bold text-lg text-slate-800">אנונימיות מלאה (Privacy by Design)</h4>
-                                <p className="text-slate-600">ארכיטקטורה מאובטחת בה המידע האישי של המטופל (PII) לעולם לא מגיע למערכות BMT. עמידה בתקנים מחמירים.</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="bg-green-100 p-3 rounded-full text-green-600 mt-1"><Icon name="Server" size={24} /></div>
-                            <div>
-                                <h4 className="font-bold text-lg text-slate-800">ערך לקופה</h4>
-                                <p className="text-slate-600">שיפור מדדי איכות, הפחתת עומס במעבדות וחיסכון בעלויות תפעול.</p>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
-                
-                <div className="flex-1 w-full flex justify-center items-center">
-                    {/* Visual representation of Phone App Integration */}
-                    <div className="relative w-[300px] h-[600px] bg-slate-900 rounded-[3rem] p-4 shadow-2xl border-4 border-slate-200">
-                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-xl z-20"></div>
-                        <div className="w-full h-full bg-slate-50 rounded-[2.5rem] overflow-hidden flex flex-col relative">
-                            {/* Header */}
-                            <div className="h-16 bg-blue-600 flex items-center justify-between px-6">
-                                <div className="w-6 h-6 bg-white/20 rounded-full"></div>
-                                <div className="text-white font-bold">HMO App</div>
-                                <div className="w-6 h-6 bg-white/20 rounded-full"></div>
-                            </div>
-                            
-                            {/* App Content Dummy */}
-                            <div className="p-6 space-y-4">
-                                <div className="w-full h-32 bg-white rounded-xl shadow-sm p-4 space-y-2">
-                                    <div className="w-1/3 h-4 bg-slate-100 rounded"></div>
-                                    <div className="w-full h-2 bg-slate-100 rounded"></div>
-                                    <div className="w-2/3 h-2 bg-slate-100 rounded"></div>
-                                </div>
-                                
-                                <div className="w-full h-20 bg-white rounded-xl shadow-sm flex items-center px-4 gap-4">
-                                    <div className="w-10 h-10 bg-slate-100 rounded-full"></div>
-                                    <div className="flex-1 h-3 bg-slate-100 rounded"></div>
-                                </div>
-
-                                {/* BMT Button */}
-                                <div className="mt-8">
-                                    <div className="text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide text-center">פעולות מהירות</div>
-                                    <button className="w-full bg-white border-2 border-blue-100 p-4 rounded-xl shadow-md flex items-center justify-between group hover:border-blue-500 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-blue-600 text-white p-2 rounded-lg">
-                                                <Icon name="Scan" size={20} />
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="font-bold text-slate-800">ביצוע בדיקת FOB</div>
-                                                <div className="text-xs text-slate-500">פענוח ביתי מהיר</div>
-                                            </div>
-                                        </div>
-                                        <Icon name="ArrowLeft" size={16} className="text-slate-400" />
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            {/* Bottom Nav */}
-                            <div className="absolute bottom-0 w-full h-16 bg-white border-t border-slate-100 flex justify-around items-center">
-                                <div className="w-6 h-6 bg-slate-200 rounded-full"></div>
-                                <div className="w-6 h-6 bg-slate-200 rounded-full"></div>
-                                <div className="w-6 h-6 bg-slate-200 rounded-full"></div>
-                            </div>
-                        </div>
+                <div className="flex-1 glass bg-white/80 p-12 rounded-[3rem] shadow-2xl border border-white animate-enter delay-100 h-[700px] flex flex-col">
+                    <h3 className="text-4xl font-bold text-center text-slate-800 mb-2">מחיר ההזנחה (CRC)</h3>
+                    <p className="text-center text-xl text-slate-500 mb-8">עלות טיפול שנתית ממוצעת למטופל</p>
+                    <div className="flex-1 flex items-end pb-8">
+                        <ProChart data={[{name:'גילוי מוקדם', val:30000}, {name:'שלב 3', val:180000}, {name:'שלב 4 (גרורתי)', val:350000}]} />
+                    </div>
+                    <div className="bg-red-50 text-red-700 text-2xl font-bold text-center py-4 rounded-2xl border border-red-100 flex justify-center gap-3">
+                        <Icon name="AlertTriangle" size={32}/> גילוי מאוחר עולה למערכת פי 10!
                     </div>
                 </div>
             </div>
         );
 
-        const ValidationSlide = () => (
-            <div className="flex flex-col w-full h-full space-y-10">
-                <div>
-                    <h2 className="text-3xl md:text-4xl font-bold text-slate-800 border-r-8 border-green-500 pr-6">תיקוף קליני וניסיון משתמש</h2>
-                    <p className="text-xl text-slate-500 mt-2">נתונים מתוך ניסויים ומחקרי שמישות שנערכו בבית חולים מוביל בישראל</p>
+        const DigitalSolutionSlide = () => (
+            <div className="h-full flex flex-col justify-center px-12 relative z-10">
+                <div className="text-center mb-16 animate-enter">
+                    <h2 className="text-6xl font-black text-slate-800 mb-4">הפתרון הדיגיטלי</h2>
+                    <p className="text-3xl text-slate-500 font-light">מעבדה מדויקת בכף היד – פשוט, חכם, מאובטח</p>
                 </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 flex-1">
-                    {/* Clinical Data */}
-                    <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-10 flex flex-col justify-center">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="bg-blue-100 p-3 rounded-xl"><Icon name="FileText" size={32} className="text-blue-600" /></div>
-                            <h3 className="text-2xl font-bold text-slate-800">דיוק פענוח AI (ביחס לבדיקה)</h3>
+                <div className="grid grid-cols-3 gap-12 flex-1 animate-enter delay-100">
+                    {[
+                        {icon: 'Scan', color: 'blue', title: '1. סריקה פשוטה', desc: 'המטופל מבצע את הבדיקה בביתו וסורק את הקסטה באפליקציה. ממשק UX מותאם לגיל השלישי.'},
+                        {icon: 'BrainCircuit', color: 'indigo', title: '2. פענוח AI', desc: 'אלגוריתם Computer Vision המזהה פסים חלשים ביותר (Faint Lines) ומונע טעויות אנוש.'},
+                        {icon: 'Database', color: 'teal', title: '3. סגירת מעגל', desc: 'אינטגרציה מלאה לתיק הרפואי (EMR). זימון תורים אוטומטי במקרה של תוצאה חיובית.'}
+                    ].map((card, i) => (
+                        <div key={i} className="glass bg-white/70 p-12 rounded-[3rem] text-center flex flex-col items-center hover:-translate-y-4 transition-transform duration-500 shadow-lg border border-white">
+                            <div className={`bg-${card.color}-100 p-8 rounded-full text-${card.color}-600 mb-8 shadow-inner`}><Icon name={card.icon} size={64}/></div>
+                            <h3 className="text-3xl font-bold text-slate-800 mb-4">{card.title}</h3>
+                            <p className="text-2xl text-slate-600 leading-relaxed">{card.desc}</p>
                         </div>
-                        <div className="space-y-8">
-                            <div className="flex justify-between items-end border-b border-slate-100 pb-3">
-                                <span className="text-slate-600 text-lg font-medium">התאמה למעבדה (PCR/Lab)</span>
-                                <span className="text-4xl font-black text-blue-600">98.6%</span>
-                            </div>
-                            <div className="flex justify-between items-end border-b border-slate-100 pb-3">
-                                <span className="text-slate-600 text-lg font-medium">רגישות (Sensitivity)</span>
-                                <span className="text-4xl font-black text-blue-600">95%</span>
-                            </div>
-                            <div className="flex justify-between items-end">
-                                <span className="text-slate-600 text-lg font-medium">סגוליות (Specificity)</span>
-                                <span className="text-4xl font-black text-blue-600">99.5%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* User Experience */}
-                    <div className="flex flex-col gap-6">
-                        <div className="bg-slate-800 text-white rounded-3xl shadow-lg p-10 flex-1 flex flex-col justify-center">
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="bg-white/20 p-3 rounded-xl"><Icon name="ThumbsUp" size={32} className="text-green-400" /></div>
-                                <h3 className="text-2xl font-bold">שביעות רצון מהפלטפורמה</h3>
-                            </div>
-                            <p className="text-slate-300 mb-6 text-lg">במחקר בקרב אוכלוסיית יעד מבוגרת (50-75):</p>
-                            <div className="flex items-center gap-6 bg-white/10 p-6 rounded-2xl">
-                                <div className="text-6xl font-black text-green-400">90.0%</div>
-                                <div className="text-lg leading-tight font-medium">
-                                    שביעות רצון גבוהה<br/>
-                                    <span className="text-slate-300 text-sm">(חווית שימוש חיובית/מצוינת)</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-3xl shadow-lg border-l-8 border-indigo-500 p-8 relative overflow-hidden">
-                            <Icon name="MessageSquareQuote" size={80} className="absolute top-4 left-4 text-indigo-50 transform rotate-180" />
-                            <p className="text-slate-600 italic relative z-10 text-xl leading-relaxed font-medium">
-                                "זה כל כך הרבה יותר פשוט מלשים מעטפה בדואר ולחכות שבועיים. קיבלתי אישור במקום והרגשתי רגוע."
-                            </p>
-                            <div className="flex items-center gap-3 mt-4">
-                                <div className="w-12 h-1 bg-indigo-500 rounded-full"></div>
-                                <p className="text-slate-500 text-sm font-bold relative z-10">גבר, בן 67, מחוז מרכז</p>
-                            </div>
-                        </div>
-                    </div>
+                    ))}
+                </div>
+                <div className="mt-16 flex justify-center gap-10 animate-enter delay-200">
+                    <div className="glass-dark px-10 py-5 rounded-full text-xl font-bold flex gap-4 items-center shadow-2xl"><Icon name="Check"/> זמינות 24/7</div>
+                    <div className="glass px-10 py-5 rounded-full text-xl font-bold flex gap-4 items-center shadow-xl text-slate-700"><Icon name="Shield"/> תקן GDPR / HIPAA</div>
                 </div>
             </div>
         );
 
-        const CTASlide = () => (
-            <div className="flex flex-col items-center justify-center h-full text-center py-10 space-y-12">
-                <div className="bg-white p-12 rounded-[2rem] shadow-2xl border-t-8 border-blue-600 max-w-6xl w-full relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100%] -z-0"></div>
-                    
-                    <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-8 relative z-10">בואו נדבר על המספרים האמיתיים</h2>
-                    <p className="text-xl text-slate-600 mb-12 leading-relaxed font-light relative z-10">
-                        יש לנו נתונים נוספים, מודלים כלכליים מפורטים ותוצאות מלאות של הניסויים הקליניים שאשמח להציג בפנייך.
-                        <br/>
-                        <strong className="text-slate-800">פגישה קצרה יכולה לשנות את מדדי האיכות של הקופה לשנה הקרובה.</strong>
-                    </p>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-                        {/* Nili Card */}
-                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center hover:shadow-md transition-shadow gap-3">
-                            <div className="bg-blue-100 p-3 rounded-full text-blue-600">
-                                <Icon name="User" size={24} />
-                            </div>
-                            <div>
-                                <div className="font-bold text-slate-800 text-lg">נילי טמיר</div>
-                                <div className="text-sm text-slate-500 mb-2">מנכ"לית BMT</div>
-                                <a href="mailto:Nili@bmtdx.com" className="flex items-center justify-center gap-2 text-blue-600 font-bold hover:underline text-sm bg-white px-3 py-1 rounded-full border border-blue-100">
-                                    <Icon name="Mail" size={14} /> Nili@bmtdx.com
-                                </a>
-                            </div>
-                        </div>
-
-                        {/* Roey Card */}
-                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center hover:shadow-md transition-shadow gap-3">
-                            <div className="bg-indigo-100 p-3 rounded-full text-indigo-600">
-                                <Icon name="User" size={24} />
-                            </div>
-                            <div>
-                                <div className="font-bold text-slate-800 text-lg">רואי טמיר</div>
-                                <div className="text-sm text-slate-500 mb-2">מנהל תפעול וטכנולוגיה</div>
-                                <a href="mailto:Roey@bmtdx.com" className="flex items-center justify-center gap-2 text-indigo-600 font-bold hover:underline text-sm bg-white px-3 py-1 rounded-full border border-indigo-100">
-                                    <Icon name="Mail" size={14} /> Roey@bmtdx.com
-                                </a>
-                            </div>
-                        </div>
-
-                        {/* Idan Card */}
-                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 flex flex-col items-center text-center hover:shadow-md transition-shadow gap-3">
-                            <div className="bg-teal-100 p-3 rounded-full text-teal-600">
-                                <Icon name="User" size={24} />
-                            </div>
-                            <div>
-                                <div className="font-bold text-slate-800 text-lg">ד"ר עידן טמיר</div>
-                                <div className="text-sm text-slate-500 mb-2">סמנכ"ל טכנולוגי ומוביל קליני</div>
-                                <a href="mailto:Idan@bmtdx.com" className="flex items-center justify-center gap-2 text-teal-600 font-bold hover:underline text-sm bg-white px-3 py-1 rounded-full border border-teal-100">
-                                    <Icon name="Mail" size={14} /> Idan@bmtdx.com
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="flex flex-col items-center opacity-40">
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="w-4 h-4 bg-slate-400 rounded"></div>
-                        <span className="text-xl font-black text-slate-400 tracking-widest">BMT DIAGNOSTICS</span>
-                    </div>
-                    <div className="text-sm text-slate-400">© 2025 מובילים את מהפכת הדיאגנוסטיקה הביתית</div>
-                </div>
-            </div>
-        );
-
-        // --- Main App Component ---
-
-        const App = () => {
-            const [currentSlide, setCurrentSlide] = useState(0);
-            const slides = [
-                CoverSlide,
-                TheProblemSlide,
-                SolutionSlide,
-                IntegrationSlide,
-                ValidationSlide,
-                CTASlide
-            ];
-
-            const nextSlide = () => {
-                if (currentSlide < slides.length - 1) setCurrentSlide(curr => curr + 1);
-            };
-
-            const prevSlide = () => {
-                if (currentSlide > 0) setCurrentSlide(curr => curr - 1);
-            };
-
-            const CurrentSlideComponent = slides[currentSlide];
+        const FOBEconomicsSlide = () => {
+            const [pop, setPop] = useState(50000);
+            const [comp, setComp] = useState(60);
+            const [boost, setBoost] = useState(15);
+            
+            const current = Math.floor(pop * (comp/100));
+            const extra = Math.floor(pop * ((comp+boost)/100)) - current;
+            const detected = Math.floor(extra * 0.003);
+            const saved = detected * 150000;
 
             return (
-                <div className="w-full h-screen bg-slate-50 flex flex-col text-right" dir="rtl">
-                    <Header currentSlide={currentSlide} totalSlides={slides.length} />
-                    
-                    <main className="flex-1 relative overflow-hidden bg-slate-50">
-                        <div key={currentSlide} className="w-full h-full slide-enter-active">
-                            <SlideContainer>
-                                <CurrentSlideComponent nextSlide={nextSlide} />
-                            </SlideContainer>
+                <div className="h-full flex flex-col px-12 pt-8 relative z-10">
+                    <div className="mb-10 animate-enter">
+                        <h2 className="text-5xl font-black text-slate-800">מחשבון חיסכון FOB</h2>
+                        <p className="text-2xl text-slate-500 mt-2">סימולציה חיה: השפעת האפליקציה על גילוי מוקדם</p>
+                    </div>
+                    <div className="flex gap-16 flex-1 animate-enter delay-100 pb-8">
+                        <div className="w-1/2 glass bg-white/80 p-12 rounded-[3rem] flex flex-col justify-center space-y-12 shadow-xl">
+                            <h3 className="text-3xl font-bold text-slate-700 flex items-center gap-4 border-b pb-6"><Icon name="Sliders" size={32}/> פרמטרים</h3>
+                            <div>
+                                <label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">אוכלוסיית יעד <span className="text-blue-600 bg-blue-50 px-4 py-1 rounded-xl">{pop.toLocaleString()}</span></label>
+                                <input type="range" min="10000" max="200000" step="5000" value={pop} onChange={e=>setPop(+e.target.value)} className="w-full"/>
+                            </div>
+                            <div>
+                                <label className="flex justify-between text-2xl font-bold text-slate-700 mb-4">היענות נוכחית <span className="text-slate-500 bg-slate-100 px-4 py-1 rounded-xl">{comp}%</span></label>
+                                <input type="range" min="30" max="80" value={comp} onChange={e=>setComp(+e.target.value)} className="w-full"/>
+                            </div>
+                            <div className="bg-green-50 p-8 rounded-3xl border-2 border-green-100">
+                                <label className="flex justify-between text-2xl font-bold text-green-800 mb-4">תוספת היענות (BMT) <span className="bg-white text-green-600 px-4 py-1 rounded-xl shadow-sm">+{boost}%</span></label>
+                                <input type="range" min="5" max="30" value={boost} onChange={e=>setBoost(+e.target.value)} className="w-full accent-green-600"/>
+                            </div>
                         </div>
-                    </main>
+                        <div className="w-1/2 flex flex-col gap-8">
+                            <div className="glass-dark p-12 rounded-[3rem] shadow-2xl relative overflow-hidden flex-1 flex flex-col justify-center text-center">
+                                <div className="relative z-10 space-y-10">
+                                    <div><div className="text-slate-400 mb-2 uppercase tracking-widest font-bold">בדיקות סקר נוספות</div><div className="text-7xl font-black text-blue-400">+{extra.toLocaleString()}</div></div>
+                                    <div><div className="text-slate-400 mb-2 uppercase tracking-widest font-bold">גילוי מוקדם (מקרים)</div><div className="text-7xl font-black text-green-400">~{detected}</div></div>
+                                </div>
+                            </div>
+                            <div className="glass bg-white p-12 rounded-[3rem] shadow-xl border-t-8 border-green-500 text-center flex-1 flex flex-col justify-center items-center">
+                                <div className="text-2xl text-slate-500 font-bold mb-4 uppercase tracking-widest">חיסכון כלכלי משוער</div>
+                                <div className="text-8xl font-black text-green-600 tracking-tighter">₪{saved.toLocaleString()}</div>
+                                <div className="mt-6 bg-green-50 text-green-800 text-sm px-4 py-2 rounded-full font-medium border border-green-100">
+                                    חיסכון של 150k ש"ח לכל מקרה של גילוי מוקדם
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
-                    <div className="fixed bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-sm border-t border-gray-200 flex items-center justify-between px-6 md:px-8 z-50">
-                        <button 
-                            onClick={prevSlide} 
-                            disabled={currentSlide === 0}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-full font-medium transition-all ${currentSlide === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}`}
-                        >
-                            <Icon name="ChevronRight" size={20} /> הקודם
-                        </button>
+        const CalprotectinSlide = () => {
+            const [pop, setPop] = useState(25000);
+            const savedColo = Math.floor(pop * 0.8 * 0.5);
+            const savedMoney = (savedColo * 2500) - (Math.floor(pop * 0.8) * 150);
 
-                        <div className="hidden md:block text-slate-400 text-sm font-medium">
-                            © 2025 BMT Diagnostics. Confidential.
+            return (
+                <div className="h-full flex flex-col px-12 pt-8 relative z-10">
+                    <div className="mb-10 animate-enter">
+                        <h2 className="text-5xl font-black text-slate-800">Calprotectin: מסננת חכמה</h2>
+                        <p className="text-2xl text-slate-500 mt-2">פתרון לעומס במכוני הגסטרו: הבדלה בין IBD ל-IBS</p>
+                    </div>
+                    <div className="flex gap-16 flex-1 animate-enter delay-100 pb-8">
+                        <div className="w-1/2 glass bg-white/80 p-12 rounded-[3rem] shadow-xl border border-indigo-100 flex flex-col justify-center">
+                            <h3 className="text-3xl font-bold text-indigo-700 mb-12 flex items-center gap-4"><Icon name="Activity" size={40}/> תרחיש קליני (שנתי)</h3>
+                            <label className="block text-2xl font-bold text-slate-700 mb-6">פניות למרפאה עם תלונות בטן</label>
+                            <input type="range" min="1000" max="50000" step="1000" value={pop} onChange={e=>setPop(+e.target.value)} className="w-full mb-4 accent-indigo-600"/>
+                            <div className="text-right font-black text-indigo-600 text-6xl mb-12">{pop.toLocaleString()}</div>
+                            <div className="bg-indigo-50 p-8 rounded-3xl text-indigo-900 border border-indigo-100 text-xl leading-relaxed">
+                                <strong className="block mb-4 text-2xl flex items-center gap-3"><Icon name="AlertCircle"/> הבעיה כיום:</strong>
+                                ללא בדיקת סקר זמינה, רוב המטופלים עם תסמונת המעי הרגיז (IBS) נשלחים לקולונוסקופיה מיותרת ויקרה, במקום לקבל טיפול בקהילה.
+                            </div>
+                        </div>
+                        <div className="w-1/2 flex flex-col gap-10 justify-center">
+                            <div className="glass bg-white p-12 rounded-[3rem] border-r-8 border-indigo-500 flex justify-between items-center hover:scale-[1.02] transition-transform shadow-xl">
+                                <div><div className="text-slate-500 font-bold text-2xl mb-2">קולונוסקופיות שנחסכו</div><div className="text-7xl font-black text-slate-800">{savedColo.toLocaleString()}</div><div className="text-lg text-slate-400 mt-2">הפחתת עומס תורים</div></div>
+                                <div className="bg-indigo-100 p-8 rounded-full text-indigo-600"><Icon name="Microscope" size={64}/></div>
+                            </div>
+                            <div className="glass bg-white p-12 rounded-[3rem] border-r-8 border-green-500 flex justify-between items-center hover:scale-[1.02] transition-transform shadow-xl">
+                                <div><div className="text-slate-500 font-bold text-2xl mb-2">חיסכון כספי ישיר</div><div className="text-7xl font-black text-green-600">₪{savedMoney.toLocaleString()}</div><div className="text-lg text-slate-400 mt-2">בניכוי עלות הבדיקות</div></div>
+                                <div className="bg-green-100 p-8 rounded-full text-green-600"><Icon name="Banknote" size={64}/></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ProductSuiteSlide = () => (
+            <div className="h-full flex flex-col px-12 pt-8 relative z-10">
+                <div className="mb-12 animate-enter">
+                    <h2 className="text-5xl font-black text-slate-800">פורטפוליו בדיקות מקיף</h2>
+                    <p className="text-2xl text-slate-500 mt-2">One-Stop-Shop: מעטפת דיאגנוסטית לבית ולמרפאה</p>
+                </div>
+                <div className="grid grid-cols-2 gap-16 flex-1 pb-12 animate-enter delay-100">
+                    <div className="glass bg-white p-12 rounded-[3rem] border-t-8 border-teal-500 shadow-2xl flex flex-col">
+                        <div className="flex justify-between items-start mb-10">
+                            <div className="bg-teal-50 p-6 rounded-3xl text-teal-600 shadow-sm"><Icon name="FlaskConical" size={48}/></div>
+                            <div className="text-left"><h3 className="text-4xl font-bold text-slate-800">גסטרו</h3><span className="text-teal-600 font-bold text-lg bg-teal-50 px-4 py-1.5 rounded-full mt-2 inline-block">התמחות ליבה</span></div>
+                        </div>
+                        <ul className="space-y-8 flex-1">
+                            {[
+                                {name: 'H. Pylori Ag', desc: 'מחליף תבחין נשיפה יקר.'},
+                                {name: 'Calprotectin', desc: 'סמן דלקת רגיש לניטור IBD וסינון.'},
+                                {name: 'Adeno/Rota', desc: 'פאנל ילדים לזיהוי מהיר של וירוסים.'}
+                            ].map((item, i) => (
+                                <li key={i} className="bg-slate-50 p-6 rounded-3xl flex items-center gap-6"><div className="text-teal-500"><Icon name="CheckCircle2" size={32}/></div><div><strong className="block text-2xl text-slate-800">{item.name}</strong><span className="text-xl text-slate-600">{item.desc}</span></div></li>
+                            ))}
+                        </ul>
+                    </div>
+                    <div className="glass bg-white p-12 rounded-[3rem] border-t-8 border-rose-500 shadow-2xl flex flex-col">
+                        <div className="flex justify-between items-start mb-10">
+                            <div className="bg-rose-50 p-6 rounded-3xl text-rose-600"><Icon name="Stethoscope" size={48}/></div>
+                            <div className="text-left"><h3 className="text-4xl font-bold text-slate-800">משפחה</h3><span className="text-rose-600 font-bold text-lg bg-rose-50 px-4 py-1 rounded-full mt-2 inline-block">רפואה יומיומית</span></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8 flex-1">
+                            {[
+                                {name: 'Covid + Flu', sub: 'Combo Test'}, {name: 'Strep A', sub: 'מניעת אנטיביוטיקה'},
+                                {name: 'Pregnancy', sub: 'hCG רגיש במיוחד'}, {name: 'Giardia', sub: 'זיהוי טפילים'}
+                            ].map((item, i) => (
+                                <div key={i} className="bg-slate-50 p-6 rounded-3xl text-center border border-slate-100 flex flex-col justify-center items-center hover:bg-rose-50 transition-colors cursor-pointer">
+                                    <strong className="block text-2xl text-slate-800 mb-2">{item.name}</strong><span className="text-lg text-slate-500 bg-white px-4 py-1 rounded-full shadow-sm">{item.sub}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const SummarySlide = () => (
+            <div className="flex flex-col items-center justify-center h-full text-center px-12 animate-enter relative z-10">
+                <div className="w-full max-w-7xl glass-dark p-20 rounded-[4rem] shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600 rounded-full blur-[200px] opacity-20 -mr-40 -mt-40 animate-pulse"></div>
+                    <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-teal-500 rounded-full blur-[200px] opacity-20 -ml-40 -mb-40 animate-pulse"></div>
+                    <div className="relative z-10">
+                        <div className="inline-block bg-gradient-to-br from-blue-600 to-indigo-600 p-8 rounded-[2rem] mb-12 shadow-2xl"><Icon name="Activity" size={80} className="text-white"/></div>
+                        <h2 className="text-7xl font-black mb-10 text-white tracking-tight">העתיד של הדיאגנוסטיקה</h2>
+                        <p className="text-4xl text-slate-300 max-w-5xl mx-auto mb-20 font-light leading-relaxed">השילוב בין בדיקות מעבדה מדויקות לטכנולוגיית AI ביתית הוא המפתח לשיפור האיכות הרפואית, חיסכון כלכלי אדיר ושירות מנצח.</p>
+                        <div className="grid grid-cols-3 gap-12 text-right">
+                            <div className="glass p-10 rounded-[2.5rem] bg-white/10 border-white/20"><h4 className="text-3xl font-bold text-blue-400 mb-4">קליני</h4><p className="text-slate-300 text-xl">דיוק מעבדתי ומניעת טעויות.</p></div>
+                            <div className="glass p-10 rounded-[2.5rem] bg-white/10 border-white/20"><h4 className="text-3xl font-bold text-green-400 mb-4">כלכלי</h4><p className="text-slate-300 text-xl">חיסכון אדיר בטיפולים.</p></div>
+                            <div className="glass p-10 rounded-[2.5rem] bg-white/10 border-white/20"><h4 className="text-3xl font-bold text-purple-400 mb-4">שירותי</h4><p className="text-slate-300 text-xl">זמינות ונוחות למבוטח.</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // --- 4. MAIN APP ---
+
+        const App = () => {
+            const [slide, setSlide] = useState(0);
+            const total = 7;
+            
+            // Auto-Scale Logic (Cinema Mode)
+            const [scale, setScale] = useState(1);
+            useEffect(() => {
+                const resize = () => {
+                    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+                    setScale(s);
+                };
+                window.addEventListener('resize', resize);
+                resize();
+                return () => window.removeEventListener('resize', resize);
+            }, []);
+
+            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [slide]);
+
+            return (
+                <div id="cinema-container" style={{ transform: `scale(${scale})` }}>
+                    <div className="absolute inset-0 z-0">
+                        <div className="blob blob-1"></div>
+                        <div className="blob blob-2"></div>
+                    </div>
+
+                    <div className="h-full flex flex-col relative z-10">
+                        <div className="h-28 flex items-center justify-between px-16 bg-white/50 backdrop-blur-sm border-b border-white/40">
+                            <Logo />
+                            <div className="flex items-center gap-6">
+                                <div className="flex gap-2 bg-slate-200/50 p-2 rounded-full">
+                                    {Array.from({length:total}).map((_,i)=><div key={i} className={`h-3 rounded-full transition-all duration-500 ${i===slide?'w-12 bg-blue-600':'w-3 bg-slate-300'}`}/>)}
+                                </div>
+                                <span className="text-xl font-bold text-slate-500 w-20 text-center">{slide+1} / {total}</span>
+                            </div>
                         </div>
 
-                        <button 
-                            onClick={nextSlide} 
-                            disabled={currentSlide === slides.length - 1}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-full font-medium transition-all ${currentSlide === slides.length - 1 ? 'text-gray-300 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'}`}
-                        >
-                            {currentSlide === slides.length - 1 ? 'סיום' : 'הבא'} <Icon name="ChevronLeft" size={20} />
-                        </button>
+                        <div className="flex-1 overflow-hidden relative">
+                            {slide === 0 && <CoverSlide next={()=>setSlide(1)} />}
+                            {slide === 1 && <StrategySlide />}
+                            {slide === 2 && <DigitalSolutionSlide />}
+                            {slide === 3 && <FOBEconomicsSlide />}
+                            {slide === 4 && <CalprotectinSlide />}
+                            {slide === 5 && <ProductSuiteSlide />}
+                            {slide === 6 && <SummarySlide />}
+                        </div>
+
+                        <div className="h-28 flex items-center justify-between px-16">
+                            <button onClick={()=>setSlide(Math.max(0, slide-1))} disabled={slide===0} className={`flex items-center gap-3 px-8 py-4 rounded-full font-bold text-xl transition-all ${slide===0?'opacity-0':'bg-white shadow-lg text-slate-700 hover:scale-105'}`}><Icon name="ChevronRight" size={28}/> הקודם</button>
+                            <div className="text-slate-400 text-lg font-medium tracking-widest uppercase">BMT Diagnostics Confidential © 2025</div>
+                            <button onClick={()=>setSlide(Math.min(total-1, slide+1))} disabled={slide===total-1} className={`flex items-center gap-3 px-12 py-4 rounded-full font-bold text-xl transition-all ${slide===total-1?'opacity-0':'bg-slate-900 shadow-2xl text-white hover:bg-blue-600 hover:scale-105'}`}>{slide===total-1?'':'הבא'} <Icon name="ChevronLeft" size={28}/></button>
+                        </div>
                     </div>
                 </div>
             );
